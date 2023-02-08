@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #define INPUT_FILE_NAME "input.txt"
 #define OUTPUT_FILE_NAME "output.txt"
@@ -173,6 +174,37 @@ void get_c(const unsigned long parameters[6]) {
     }
 }
 
+int is_prime(unsigned long n) {
+    for (int i = 2; i < sqrt(n) + 1; i++) {
+        if (n % i == 0 && i != n) return 0;
+    }
+
+    return 1;
+}
+
+int check_a(unsigned long a, unsigned long m) {
+    if (m % 4 == 0 && a % 4 != 0) return 0;
+    for (int i = 2; i < sqrt(m) + 1 && i < sqrt(a); i++) {
+        if (is_prime(i)) {
+            if (a % i != 0) return 0;
+        }
+        if (is_prime(m/i)) {
+            if (a % (m/i) != 0) return 0;
+        }
+    }
+    return 1;
+}
+
+void get_a(const unsigned long parameters[6]) {
+    unsigned long m = parameters[M];
+
+    for (unsigned long a = 0; a < m; a++) {
+        if (check_a(a, m)) {
+            fprintf(output_file, "%lu ", a + 1);
+        }
+    }
+}
+
 int main() {
     input_file = fopen(INPUT_FILE_NAME, "r");
     output_file = fopen(OUTPUT_FILE_NAME, "w");
@@ -195,6 +227,7 @@ int main() {
             get_c(parsed_command);
             break;
         case GET_A:
+            get_a(parsed_command);
             break;
         case LGC:
             break;
