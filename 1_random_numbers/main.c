@@ -151,6 +151,28 @@ char *readline() {
     return buff;
 }
 
+int is_coprime(unsigned long a, unsigned long b) {
+    while (b != 0) {
+        unsigned long t = b;
+        b = a % b;
+        a = t;
+    }
+
+    return a == 1;
+}
+
+void get_c(const unsigned long parameters[6]) {
+    unsigned long cmin = parameters[CMIN];
+    unsigned long cmax = parameters[CMAX];
+    unsigned long m = parameters[M];
+
+    for (unsigned long c = cmin; c < cmax; c++) {
+        if (is_coprime(c, m)) {
+            fprintf(output_file, "%lu ", c);
+        }
+    }
+}
+
 int main() {
     input_file = fopen(INPUT_FILE_NAME, "r");
     output_file = fopen(OUTPUT_FILE_NAME, "w");
@@ -168,9 +190,21 @@ int main() {
     unsigned long parsed_command[6];
     parse_command(line, parsed_command);
 
+    switch (parsed_command[0]) {
+        case GET_C:
+            get_c(parsed_command);
+            break;
+        case GET_A:
+            break;
+        case LGC:
+            break;
+        case TEST:
+            break;
+    }
+
     free(line);
     fclose(input_file);
     fclose(output_file);
-    fclose(input_file_test);
+    if (input_file_test != NULL) fclose(input_file_test);
     return 0;
 }
