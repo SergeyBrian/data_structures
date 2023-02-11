@@ -19,7 +19,6 @@
 #define PARAM_X "x0"
 #define PARAM_C "c"
 #define PARAM_N "n"
-#define PARAM_C "c"
 #define PARAM_INP "inp"
 
 FILE *input_file;
@@ -188,8 +187,8 @@ int check_a(unsigned long a, unsigned long m) {
         if (is_prime(i)) {
             if (a % i != 0) return 0;
         }
-        if (is_prime(m/i)) {
-            if (a % (m/i) != 0) return 0;
+        if (is_prime(m / i)) {
+            if (a % (m / i) != 0) return 0;
         }
     }
     return 1;
@@ -202,6 +201,24 @@ void get_a(const unsigned long parameters[6]) {
         if (check_a(a, m)) {
             fprintf(output_file, "%lu ", a + 1);
         }
+    }
+}
+
+void lgc(const unsigned long parameters[8]) {
+    unsigned long a = parameters[A];
+    unsigned long x0 = parameters[X0];
+    unsigned long c = parameters[C];
+    unsigned long m = parameters[M];
+    unsigned long n = parameters[N];
+
+    if (n < 1 || a >= m || c >= m || x0 >= m) {
+        error_exit("no solutions", 1);
+    }
+
+    unsigned long x = x0;
+    for (int i = 0; i < n; i++) {
+        x = (a * x + c) % m;
+        fprintf(output_file, "%lu ", x);
     }
 }
 
@@ -219,7 +236,7 @@ int main() {
 
     char *line = readline();
 
-    unsigned long parsed_command[6];
+    unsigned long parsed_command[8];
     parse_command(line, parsed_command);
 
     switch (parsed_command[0]) {
@@ -230,6 +247,7 @@ int main() {
             get_a(parsed_command);
             break;
         case LGC:
+            lgc(parsed_command);
             break;
         case TEST:
             break;
