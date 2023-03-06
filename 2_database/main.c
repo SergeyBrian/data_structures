@@ -30,8 +30,20 @@ int main(int argc, char **argv) {
 
 
     db_insert(DB, "first_name=hello,last_name=fucker,phone=79998887766,middle_name=ok,money=4.4,min_money=18,status=normal");
+    db_insert(DB, "first_name=hello1,last_name=fucker,phone=79998887766,middle_name=ok,money=4.4,min_money=18,status=normal");
+    db_insert(DB, "first_name=hello2,last_name=fucker,phone=79998887766,middle_name=ok,money=4.4,min_money=18,status=normal");
+    db_insert(DB, "first_name=hello3,last_name=fucker,phone=79998887766,middle_name=ok,money=4.4,min_money=18,status=normal");
 
+    List *recs;
 
+    recs = db_select(DB, 3, "");
+
+    list_iter(recs) {
+        DBRecord *rec = cast(DBRecord *, it->value);
+        printf("%s\n", rec->first_name);
+    }
+
+    db_destroy(recs);
     db_destroy(DB);
     printf("%d\n%d\n%d\n", malloc_count, calloc_count, free_count);
 

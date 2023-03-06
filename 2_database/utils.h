@@ -27,6 +27,8 @@ extern int free_count;
 
 void *mmalloc(size_t size);
 
+char *mstrdup(const char * src);
+
 void *mcalloc(size_t type, int n);
 
 void mfree(void *ptr);
@@ -36,7 +38,8 @@ typedef enum {
     ERR_INVALID_COMMAND,
     ERR_INVALID_OPERATOR,
     ERR_INVALID_FIELD_NAME,
-    ERR_INVALID_ENUM_VALUE
+    ERR_INVALID_ENUM_VALUE,
+    ERR_OUT_OF_MEMORY
 } exitcode;
 
 void error_exit(exitcode e);

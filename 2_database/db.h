@@ -53,4 +53,6 @@ void db_destroy(List *DB);
 
 void db_insert(List *DB, char *params);
 
+List *db_select(List *DB, int n, char *conditions);
+
 #endif //INC_2_DATABASE_DB_H

@@ -3,6 +3,8 @@
 
 #define MAX_BUFF_SIZE 64
 
+#define MAX_RECORDS 100000
+
 char status_names[][MAX_BUFF_SIZE] = {
         "normal",
         "only_incoming_calls",
@@ -53,7 +55,11 @@ List *db_init() {
 
 void db_destroy(List *DB) {
     list_iter(DB) {
-        mfree((DBRecord *) it->value);
+        DBRecord *rec = cast(DBRecord *, it->value);
+        mfree(rec->first_name);
+        mfree(rec->last_name);
+        mfree(rec->middle_name);
+        mfree(rec);
     }
     list_destroy(DB);
 }
@@ -65,7 +71,7 @@ typedef struct {
 } FieldInfo;
 
 void db_insert(List *DB, char *values_str) {
-    DBRecord *record = malloc(sizeof(DBRecord));
+    DBRecord *record = mmalloc(sizeof(DBRecord));
 
     FieldInfo field_infos[] = {
             {"last_name", &record->last_name, 's'},
@@ -78,7 +84,7 @@ void db_insert(List *DB, char *values_str) {
     };
     int num_fields = sizeof(field_infos) / sizeof(FieldInfo);
 
-    char* str_copy = strdup(values_str);
+    char* str_copy = mstrdup(values_str);
     char* field_str = strtok(str_copy, ",");
     while (field_str != NULL) {
         char* equals_sign = strchr(field_str, '=');
@@ -102,7 +108,7 @@ void db_insert(List *DB, char *values_str) {
 
         switch (field_info->field_type) {
             case 's':
-                *(char**)field_info->field_ptr = strdup(value_str);
+                *(char**)field_info->field_ptr = mstrdup(value_str);
                 break;
             case 'l':
                 *(unsigned long long*)field_info->field_ptr = (unsigned long long) atoll(value_str);
@@ -131,7 +137,28 @@ void db_insert(List *DB, char *values_str) {
         field_str = strtok(NULL, ",");
     }
 
-    free(str_copy);
+    mfree(str_copy);
 
     list_append(DB, cast(long long, record));
+}
+
+List *db_select(List* BD, int n, char* conditions) {
+    int count = 0;
+    List *result = list_init();
+
+    list_iter(BD) {
+        if (count == n) {
+            break;
+        }
+
+        count++;
+        DBRecord *record = mmalloc(sizeof(DBRecord));
+        memcpy(record, cast(DBRecord *, it->value), sizeof(DBRecord));
+        record->first_name = mstrdup(record->first_name);
+        record->last_name = mstrdup(record->last_name);
+        record->middle_name = mstrdup(record->middle_name);
+        list_append(result, cast(long long, record));
+    }
+
+    return result;
 }

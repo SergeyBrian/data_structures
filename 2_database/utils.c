@@ -5,7 +5,8 @@ char error_messages[][100] = {
         "Некорректный формат команды",
         "Некорректный оператор в команде",
         "Некорректное название поля в команде",
-        "Некорректное значение перечисления"
+        "Некорректное значение перечисления",
+        "Закончилась память"
 };
 
 int malloc_count = 0;
@@ -31,4 +32,9 @@ void *mcalloc(size_t type, int n) {
 void mfree(void *ptr) {
     free_count++;
     free(ptr);
+}
+
+char *mstrdup(const char *src) {
+    malloc_count++;
+    return strdup(src);
 }
