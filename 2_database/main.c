@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <wchar.h>
 
 #include "list.h"
 #include "db.h"
@@ -24,13 +23,13 @@ void parse_params(char **params, int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-    char params[MAX_PARAM_SIZE][MAX_PARAMS_COUNT] = {};
+    char params[MAX_PARAM_SIZE][MAX_PARAMS_COUNT];
     parse_params(params, argc, argv);
 
     List *DB = db_init();
 
 
-    db_insert(DB, "first_name=hello,last_name=fucker,phone=79998887766,middle_name=ok");
+    db_insert(DB, "first_name=hello,last_name=fucker,phone=79998887766,middle_name=ok,money=4.4,min_money=18,status=normal");
 
 
     db_destroy(DB);

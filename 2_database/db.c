@@ -52,99 +52,86 @@ List *db_init() {
 }
 
 void db_destroy(List *DB) {
+    list_iter(DB) {
+        mfree((DBRecord *) it->value);
+    }
     list_destroy(DB);
 }
 
-FieldName str_to_field(char *s) {
-    for (int i = 0; i < FIELD_NAME_COUNT; i++) {
-        if (strcmp(s, field_names[i]) == 0) return (FieldName) i;
-    }
-}
+typedef struct {
+    char* field_name;
+    void* field_ptr;
+    char field_type;
+} FieldInfo;
 
-UserStatus str_to_status(char *s) {
-    for (int i = 0; i < USER_STATUS_COUNT; i++) {
-        if (strcmp(s, status_names[i]) == 0) return (UserStatus) i;
-    }
-}
-
-int eval_statement(DBRecord *rec, Statement statement) {
-    switch (statement.op) {
-        case EQUAL:
-            switch (str_to_field(statement.left)) {
-                case LAST_NAME:
-                    strcpy(rec->last_name, statement.right);
-                    break;
-                case FIRST_NAME:
-                    strcpy(rec->first_name, statement.right);
-                    break;
-                case MIDDLE_NAME:
-                    strcpy(rec->middle_name, statement.right);
-                    break;
-                case PHONE:
-                    rec->phone = atoi(statement.right);
-                    break;
-                case MONEY:
-                    rec->money = atof(statement.right);
-                    break;
-                case MIN_MONEY:
-                    rec->min_money = atof(statement.right);
-                    break;
-                case STATUS:
-                    rec->status = str_to_status(statement.right);
-                    break;
-                default:
-                    error_exit(ERR_INVALID_FIELD_NAME);
-            }
-            break;
-        case LESS:
-            break;
-        case GREATER:
-            break;
-        case IN:
-            break;
-        case INCLUDE:
-            break;
-        case IS_EQUAL:
-            return strcmp(statement.left, statement.right) == 0;
-            break;
-        case NOT_EQUAL:
-            return strcmp(statement.left, statement.right) != 0;
-            break;
-        default:
-            error_exit(ERR_INVALID_OPERATOR);
-    }
-}
-
-void db_insert(List *DB, char *params) {
+void db_insert(List *DB, char *values_str) {
     DBRecord *record = malloc(sizeof(DBRecord));
 
-    int l = strlen(params);
-    char buff[MAX_BUFF_SIZE] = {};
-    int buff_size = 0;
-    Statement statement = {NULL, NULL, EQUAL};
-    statement.left = mcalloc(sizeof(char), MAX_BUFF_SIZE);
-    statement.right = mcalloc(sizeof(char), MAX_BUFF_SIZE);
-    StatementState state = FIRST;
-    for (int i = 0; i < l && params[i] != '\n'; i++) {
-        if (isalnum(params[i]) || params[i] == '_' || params[i] == '.') {
-            buff[buff_size++] = params[i];
-            continue;
+    FieldInfo field_infos[] = {
+            {"last_name", &record->last_name, 's'},
+            {"first_name", &record->first_name, 's'},
+            {"middle_name", &record->middle_name, 's'},
+            {"phone", &record->phone, 'l'},
+            {"money", &record->money, 'f'},
+            {"min_money", &record->min_money, 'f'},
+            {"status", &record->status, 'e'},
+    };
+    int num_fields = sizeof(field_infos) / sizeof(FieldInfo);
+
+    char* str_copy = strdup(values_str);
+    char* field_str = strtok(str_copy, ",");
+    while (field_str != NULL) {
+        char* equals_sign = strchr(field_str, '=');
+        if (equals_sign == NULL) {
+            error_exit(ERR_INVALID_FIELD_NAME);
         }
-        if (INDEX_OF(operator_symbols, OPERATORS_COUNT, params[i]) == -1) {
-            state = (state + 1) % STATEMENT_STATE_COUNT;
-            if (statement.left == NULL || statement.right == NULL) error_exit(ERR_INVALID_COMMAND);
-            eval_statement(record, statement);
-            statement.right = NULL;
-            statement.left = NULL;
+        *equals_sign = '\0';
+        char* field_name = field_str;
+        char* value_str = equals_sign + 1;
+
+        FieldInfo* field_info = NULL;
+        for (int i = 0; i < num_fields; i++) {
+            if (strcmp(field_infos[i].field_name, field_name) == 0) {
+                field_info = &field_infos[i];
+                break;
+            }
         }
-        if (state == FIRST) {
-            strcpy(statement.left, buff);
-            state = SECOND;
+        if (field_info == NULL) {
+            error_exit(ERR_INVALID_FIELD_NAME);
         }
 
+        switch (field_info->field_type) {
+            case 's':
+                *(char**)field_info->field_ptr = strdup(value_str);
+                break;
+            case 'l':
+                *(unsigned long long*)field_info->field_ptr = (unsigned long long) atoll(value_str);
+                break;
+            case 'f':
+                *(float*)field_info->field_ptr = atof(value_str);
+                break;
+            case 'e':
+                if (strcmp(value_str, "normal") == 0) {
+                    *(UserStatus*)field_info->field_ptr = normal;
+                } else if (strcmp(value_str, "only_incoming_calls") == 0) {
+                    *(UserStatus*)field_info->field_ptr = only_incoming_calls;
+                } else if (strcmp(value_str, "no_calls") == 0) {
+                    *(UserStatus*)field_info->field_ptr = no_calls;
+                } else if (strcmp(value_str, "disabled") == 0) {
+                    *(UserStatus*)field_info->field_ptr = disabled;
+                } else {
+                    error_exit(ERR_INVALID_ENUM_VALUE);
+                }
+                break;
+            default:
+                error_exit(ERR_INVALID_FIELD_NAME);
+                break;
+        }
+
+        field_str = strtok(NULL, ",");
     }
 
-    free(statement.left);
-    free(statement.right);
+    free(str_copy);
+
     list_append(DB, cast(long long, record));
 }

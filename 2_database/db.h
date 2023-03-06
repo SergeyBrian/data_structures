@@ -22,7 +22,7 @@ typedef struct {
     char *last_name;
     char *first_name;
     char *middle_name;
-    int phone;
+    unsigned long long phone;
     float money;
     float min_money;
     UserStatus status;

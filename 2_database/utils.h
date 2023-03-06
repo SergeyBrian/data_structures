@@ -9,7 +9,7 @@
     ({ \
         int INDEX = -1; \
         for (int I = 0; I < (LEN); I++) { \
-            if ((ARR)[I][0] == (ELEMENT)) { \
+            if (strcmp((ARR)[I], (ELEMENT)) == 0) { \
                 INDEX = I; \
                 break; \
             } \
@@ -35,7 +35,8 @@ typedef enum {
     ERR_INVALID_PARAMS,
     ERR_INVALID_COMMAND,
     ERR_INVALID_OPERATOR,
-    ERR_INVALID_FIELD_NAME
+    ERR_INVALID_FIELD_NAME,
+    ERR_INVALID_ENUM_VALUE
 } exitcode;
 
 void error_exit(exitcode e);
