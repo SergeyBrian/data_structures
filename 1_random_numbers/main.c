@@ -10,7 +10,7 @@
 
 #define COMMAND_GET_C "get_c"
 #define COMMAND_GET_A "get_a"
-#define COMMAND_LGC "lcg"
+#define COMMAND_LCG "lcg"
 #define COMMAND_TEST "test"
 
 #define PARAM_CMAX "cmax"
@@ -59,7 +59,7 @@ typedef enum {
     INVALID_COMMAND,
     GET_C,
     GET_A,
-    LGC,
+    LCG,
     TEST
 } command;
 
@@ -88,7 +88,7 @@ param str_to_param(char *str) {
 command str_to_command(char *str) {
     if (strcmp(str, COMMAND_GET_C) == 0) return GET_C;
     if (strcmp(str, COMMAND_GET_A) == 0) return GET_A;
-    if (strcmp(str, COMMAND_LGC) == 0) return LGC;
+    if (strcmp(str, COMMAND_LCG) == 0) return LCG;
     if (strcmp(str, COMMAND_TEST) == 0) return TEST;
     return INVALID_COMMAND;
 }
@@ -315,7 +315,7 @@ int main() {
         case GET_A:
             get_a(parsed_command);
             break;
-        case LGC:
+        case LCG:
             lcg(parsed_command);
             break;
         case TEST:
