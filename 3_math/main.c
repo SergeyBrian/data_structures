@@ -17,6 +17,13 @@ typedef enum {
 } operator;
 
 
+// If operation is unary, only left value is used
+typedef struct {
+    long long left;
+    long long right;
+    operator op;
+} operation;
+
 int ctoi(char c) {
     return (int) (c - 48);
 }
