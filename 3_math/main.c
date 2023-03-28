@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
+#include <math.h>
 
 #define MAX_INPUT_LEN 3000
 typedef enum {
@@ -13,16 +13,29 @@ typedef enum {
     FACT = 33,
     BRACES_OPEN = 40,
     BRACES_CLOSED = 41,
-    MOD = 37
+    MOD = 37,
+    CONST = -1,
+    VARIABLE = -2
 } operator;
 
 
 // If operation is unary, only left value is used
-typedef struct {
-    long long left;
-    long long right;
+struct operation {
+    struct operation *left;
+    struct operation *right;
+    long long value;
     operator op;
-} operation;
+};
+
+typedef struct operation operation;
+
+struct operation_linked {
+    struct operation_linked *previous;
+    operation *op;
+};
+
+typedef struct operation_linked operation_linked;
+
 
 int ctoi(char c) {
     return (int) (c - 48);
@@ -59,6 +72,113 @@ int is_operator(char c) {
     return c == PLUS || c == MINUS || c == PROD || c == POW || c == FACT || c == BRACES_OPEN || c == BRACES_CLOSED;
 }
 
+long long fact(long long x) {
+    if (x == 0) return 1;
+    return (x * fact(x - 1));
+}
+
+operation *queue_to_tree(char *queue[30], int queue_size) {
+    operation *result = NULL;
+    operation_linked *operation_list = (operation_linked *) malloc(sizeof(operation_linked));
+
+    operation_linked *last_operation = operation_list;
+
+    operation_list->previous = NULL;
+
+    for (int i = 0; i < queue_size; i++) {
+        if (isdigit(queue[i][0])) {
+            continue;
+        }
+
+        operation *new_op = (operation *) malloc(sizeof(operation));
+        result = new_op;
+        last_operation->op = new_op;
+        operator op = (operator) queue[i][0];
+
+        switch (op) {
+            case PLUS:
+            case MINUS:
+            case PROD:
+            case POW:
+            case MOD: {
+                operation *left = (operation *) malloc(sizeof(operation));
+                operation *right = (operation *) malloc(sizeof(operation));
+                new_op->left = left;
+                new_op->right = right;
+
+                int j = i;
+                while (j >= 0 && queue[--j] == NULL);
+
+                if (j < 0) {
+                    //
+                } else {
+                    right->value = atoll(queue[j]);
+                    right->op = CONST;
+                    right->left = NULL;
+                    right->right = NULL;
+
+                    if (--j >= 0) {
+                        left->value = atoll(queue[j]);
+                        left->op = CONST;
+                        right->left = NULL;
+                        right->right = NULL;
+                    } else {
+                        //
+                    }
+                }
+
+                break;
+            }
+            case FACT:
+                operation *left = (operation *) malloc(sizeof(operation));
+                new_op->left = left;
+                new_op->right = NULL;
+                int j = i;
+                while (j >= 0 && queue[--j] == NULL);
+
+                if (j < 0) {
+                    //
+                } else {
+                    left->value = atoll(queue[j]);
+                    left->op = CONST;
+                    left->left = NULL;
+                    left->right = NULL;
+                }
+                break;
+            default:
+                incorrect_input_exit();
+                break;
+        }
+
+        new_op->op = op;
+
+        operation_linked *last_operation_ptr = last_operation;
+        last_operation = (operation_linked *) malloc(sizeof(operation_linked));
+        last_operation->previous = last_operation_ptr;
+    }
+
+    // TODO: free operation list
+    return result;
+}
+
+long long calculate(operation *op) {
+    switch (op->op) {
+        case PLUS:
+            return calculate(op->left) + calculate(op->right);
+        case MINUS:
+            return calculate(op->left) - calculate(op->right);
+        case PROD:
+            return calculate(op->left) * calculate(op->right);
+        case POW:
+            return pow(calculate(op->left), calculate(op->right));
+        case FACT:
+            return fact(calculate(op->left));
+        case MOD:
+            return calculate(op->left) % calculate(op->right);
+        case CONST:
+            return op->value;
+    }
+}
 
 int main() {
     char input[MAX_INPUT_LEN * 100 + 1];
@@ -92,11 +212,11 @@ int main() {
 
     char *output_queue[30];
     for (int i = 0; i < 30; i++) {
-        output_queue[i] = (char *) malloc(sizeof(char) * 101);
+        output_queue[i] = (char *) calloc(sizeof(char), 101);
     }
     int queue_size = 0;
 
-    char current_number[100] = {};
+    char current_number[100] = "";
     int current_number_size = 0;
 
     for (int i = 0; i < input_len; i++) {
@@ -114,7 +234,8 @@ int main() {
         if (input[i] == ' ') continue;
 
         if (is_operator(input[i])) {
-            while (operator_stack_size && (should_replace((operator) input[i], operator_stack[operator_stack_size - 1]))) {
+            while (operator_stack_size &&
+                   (should_replace((operator) input[i], operator_stack[operator_stack_size - 1]))) {
                 operator op = operator_stack[--operator_stack_size];
                 if (op != BRACES_OPEN && op != BRACES_CLOSED)
                     output_queue[queue_size++][0] = (char) op;
@@ -133,9 +254,8 @@ int main() {
         }
     }
 
-    for (int i = 0; i < queue_size; i++) {
-        printf("%s ", output_queue[i]);
-    }
+    operation *operation_tree = queue_to_tree(output_queue, queue_size);
+    printf("\n%lld\n", calculate(operation_tree));
 
     return 0;
 }
