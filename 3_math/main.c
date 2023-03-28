@@ -86,7 +86,6 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
     operation_list->previous = NULL;
 
     for (int i = 0; i < queue_size; i++) {
-        printf("%s ", queue[i]);
         if (isdigit(queue[i][0])) {
             continue;
         }
@@ -108,10 +107,14 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                 new_op->right = right;
 
                 int j = i;
-                while (j >= 0 && (queue[--j] == NULL || !isdigit(queue[j][0])));
+                while (--j >= 0 && (queue[j] == NULL || !isdigit(queue[j][0])));
 
                 if (j < 0) {
-                    //
+                    if (last_operation->previous == NULL || last_operation->previous->op == NULL ||
+                        last_operation->previous->previous == NULL || last_operation->previous->previous->op == NULL)
+                        incorrect_input_exit();
+                    new_op->right = last_operation->previous->op;
+                    new_op->left = last_operation->previous->previous->op;
                 } else {
                     right->value = atoll(queue[j]);
                     right->op = CONST;
@@ -259,6 +262,9 @@ int main() {
         }
     }
 
+    for (int i = 0; i < queue_size; i++) {
+        printf("%s ", output_queue[i]);
+    }
     operation *operation_tree = queue_to_tree(output_queue, queue_size);
     printf("\n%lld\n", calculate(operation_tree));
 
