@@ -115,13 +115,18 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                         incorrect_input_exit();
                     new_op->right = last_operation->previous->op;
                     new_op->left = last_operation->previous->previous->op;
+                    last_operation->previous = last_operation->previous->previous->previous;
+                    // TODO: free memory
+
                 } else {
                     right->value = atoll(queue[j]);
                     right->op = CONST;
 
                     queue[j] = NULL;
 
-                    if (--j >= 0) {
+                    while (--j >= 0 && (queue[j] == NULL || !isdigit(queue[j][0])));
+
+                    if (j >= 0) {
                         left->value = atoll(queue[j]);
                         left->op = CONST;
                         queue[j] = NULL;
@@ -130,6 +135,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                         if (last_operation->previous->op == NULL) incorrect_input_exit();
                         free(left);
                         left = last_operation->previous->op;
+                        last_operation->previous = last_operation->previous->previous;
                         new_op->left = right;
                         new_op->right = left;
                     }
@@ -137,7 +143,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
 
                 break;
             }
-            case FACT:
+            case FACT: {
                 operation *left = (operation *) malloc(sizeof(operation));
                 new_op->left = left;
                 new_op->right = NULL;
@@ -153,9 +159,10 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                     left->right = NULL;
                 }
                 break;
-            default:
-                incorrect_input_exit();
+                default:
+                    incorrect_input_exit();
                 break;
+            }
         }
 
         new_op->op = op;
