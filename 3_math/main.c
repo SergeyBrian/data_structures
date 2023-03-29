@@ -77,6 +77,18 @@ long long fact(long long x) {
     return (x * fact(x - 1));
 }
 
+void free_operation(operation *op) {
+    if (op == NULL) return;
+    free_operation(op->left);
+    free_operation(op->right);
+}
+
+void free_operations_list(operation_linked *last_operation) {
+    if (last_operation->previous != NULL) free_operations_list(last_operation->previous);
+    free_operation(last_operation->op);
+    free(last_operation);
+}
+
 operation *queue_to_tree(char *queue[30], int queue_size) {
     operation *result = NULL;
     operation_linked *operation_list = (operation_linked *) malloc(sizeof(operation_linked));
@@ -176,7 +188,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
         last_operation->previous = last_operation_ptr;
     }
 
-    // TODO: free operation list
+    free_operations_list(last_operation);
     return result;
 }
 
