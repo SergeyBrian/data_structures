@@ -115,8 +115,10 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                         incorrect_input_exit();
                     new_op->right = last_operation->previous->op;
                     new_op->left = last_operation->previous->previous->op;
+                    operation_linked *previous_ptr = last_operation->previous;
                     last_operation->previous = last_operation->previous->previous->previous;
-                    // TODO: free memory
+                    free(previous_ptr->previous->previous);
+                    free(previous_ptr->previous);
 
                 } else {
                     right->value = atoll(queue[j]);
@@ -135,7 +137,9 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                         if (last_operation->previous->op == NULL) incorrect_input_exit();
                         free(left);
                         left = last_operation->previous->op;
+                        operation_linked *previous_ptr = last_operation->previous;
                         last_operation->previous = last_operation->previous->previous;
+                        free(previous_ptr);
                         new_op->left = right;
                         new_op->right = left;
                     }
