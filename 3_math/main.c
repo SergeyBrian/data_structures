@@ -262,7 +262,7 @@ int main() {
         }
         if (input[i] == '\0') break;
         if (!isdigit(input[i])) {
-            if (!is_operator(input[i]) && input[i] != ' ') {
+            if (!is_operator(input[i]) && input[i] != ' ' && input[i] != '.') {
                 incorrect_input_exit();
             }
             if (input[i] == ' ') {
@@ -286,7 +286,7 @@ int main() {
     int current_number_size = 0;
 
     for (int i = 0; i < input_len; i++) {
-        if (isdigit(input[i])) {
+        if (isdigit(input[i]) || input[i] == '.') {
             current_number[current_number_size++] = input[i];
             current_number[current_number_size] = '\0';
             continue;

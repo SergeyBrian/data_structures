@@ -4,4 +4,6 @@ project(calc C)
 set(CMAKE_C_STANDARD 99)
 
 add_executable(calc main.c)
-target_link_libraries(calc PRIVATE m)
+IF (NOT WIN32)
+    target_link_libraries(calc PRIVATE m)
+ENDIF()
