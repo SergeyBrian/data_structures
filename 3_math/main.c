@@ -16,7 +16,8 @@ typedef enum {
     BRACES_CLOSED = (int) ')',
     MOD = (int) '%',
     CONST = -1,
-    VARIABLE = -2
+    VARIABLE = -2,
+    UNARY_MINUS = 64
 } operator;
 
 
@@ -51,7 +52,8 @@ int operator_weight(operator op) {
     if (op == PROD || op == MOD || op == DIV) return 2;
     if (op == POW) return 3;
     if (op == FACT) return 4;
-    if (op == BRACES_OPEN) return 5;
+    if (op == UNARY_MINUS) return 5;
+    if (op == BRACES_OPEN) return 6;
     return 0;
 }
 
@@ -62,15 +64,13 @@ void incorrect_input_exit() {
 
 int should_replace(operator new, operator old) {
     if (old == BRACES_OPEN) return 0;
-    if (operator_weight(new) == operator_weight(old)) {
-        return 1;
-    }
-    return (operator_weight(new) < operator_weight(old));
+    return operator_weight(new) <= operator_weight(old);
 }
 
 
 int is_operator(char c) {
-    return c == PLUS || c == MINUS || c == PROD || c == POW || c == FACT || c == DIV || c == BRACES_OPEN || c == BRACES_CLOSED;
+    return c == PLUS || c == MINUS || c == PROD || c == POW || c == FACT || c == DIV || c == BRACES_OPEN ||
+           c == BRACES_CLOSED;
 }
 
 double fact(double x) {
@@ -128,28 +128,25 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                 new_op->right = right;
 
                 int j = i;
-                while (--j >= 0 && (queue[j] == NULL || !isdigit(queue[j][0])));
+                while (--j >= 0 && (queue[j] != NULL && !isdigit(queue[j][0])));
 
-                if (j < 0) {
-                    if (last_operation->previous == NULL || last_operation->previous->op == NULL ||
-                        last_operation->previous->previous == NULL || last_operation->previous->previous->op == NULL)
-                        incorrect_input_exit();
-                    new_op->right = last_operation->previous->op;
-                    new_op->left = last_operation->previous->previous->op;
-                    operation_linked *previous_ptr = last_operation->previous;
-                    last_operation->previous = last_operation->previous->previous->previous;
-                    free(previous_ptr->previous->previous);
-                    free(previous_ptr->previous);
+                if (j >= 0) {
+                    if (queue[j] != NULL) {
+                        right->value = atof(queue[j]);
+                        right->op = CONST;
 
-                } else {
-                    right->value = atof(queue[j]);
-                    right->op = CONST;
-
-                    queue[j] = NULL;
+                        queue[j] = NULL;
+                    } else {
+                        if (last_operation->previous == NULL || last_operation->previous->op == NULL)
+                            incorrect_input_exit();
+                        new_op->right = last_operation->previous->op;
+                        operation_linked *previous_ptr = last_operation->previous;
+                        last_operation->previous = last_operation->previous->previous;
+                    }
 
                     while (--j >= 0 && (queue[j] == NULL || !isdigit(queue[j][0])));
 
-                    if (j >= 0) {
+                    if (j >= 0 && queue[j] != NULL) {
                         left->value = atof(queue[j]);
                         left->op = CONST;
                         queue[j] = NULL;
@@ -164,30 +161,55 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                         new_op->left = right;
                         new_op->right = left;
                     }
+                } else {
+                    if (last_operation->previous == NULL || last_operation->previous->op == NULL ||
+                        last_operation->previous->previous == NULL || last_operation->previous->previous->op == NULL)
+                        incorrect_input_exit();
+                    new_op->right = last_operation->previous->op;
+                    new_op->left = last_operation->previous->previous->op;
+                    operation_linked *previous_ptr = last_operation->previous;
+                    last_operation->previous = last_operation->previous->previous->previous;
+//                    free(previous_ptr->previous->previous);
+//                    free(previous_ptr->previous);
                 }
 
                 break;
             }
+            case UNARY_MINUS:
             case FACT: {
                 operation *left = (operation *) malloc(sizeof(operation));
                 new_op->left = left;
                 new_op->right = NULL;
                 int j = i;
-                while (j >= 0 && queue[--j] == NULL);
+                while (--j >= 0 && (queue[j] != NULL && !isdigit(queue[j][0])));
 
-                if (j < 0) {
-                    //
-                } else {
+                if (j >= 0 && queue[j] != NULL) {
                     left->value = atof(queue[j]);
                     left->op = CONST;
                     left->left = NULL;
                     left->right = NULL;
+                } else {
+                    if (last_operation->previous == NULL) incorrect_input_exit();
+                    if (last_operation->previous->op == NULL) incorrect_input_exit();
+                    free(left);
+
+                    left = last_operation->previous->op;
+                    operation_linked *previous_ptr = last_operation->previous;
+                    last_operation->previous = last_operation->previous->previous;
+                    free(previous_ptr);
+
+                    new_op->left = left;
                 }
-                break;
-                default:
-                    incorrect_input_exit();
+
+                new_op->op = op;
+
+                if (j >= 0) queue[j] = NULL;
+
                 break;
             }
+            default:
+                incorrect_input_exit();
+                break;
         }
 
         new_op->op = op;
@@ -219,6 +241,8 @@ double calculate(operation *op) {
             return (double) ((int) calculate(op->left) % (int) calculate(op->right));
         case CONST:
             return op->value;
+        case UNARY_MINUS:
+            return -(calculate(op->left));
     }
 }
 
@@ -276,6 +300,9 @@ int main() {
         if (input[i] == ' ') continue;
 
         if (is_operator(input[i])) {
+            if (input[i] == (operator) MINUS && (i == 0 || input[i - 1] == (operator) BRACES_OPEN)) {
+                input[i] = (char) UNARY_MINUS;
+            }
             while (operator_stack_size &&
                    (should_replace((operator) input[i], operator_stack[operator_stack_size - 1]))) {
                 operator op = operator_stack[--operator_stack_size];
