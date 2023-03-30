@@ -6,14 +6,15 @@
 
 #define MAX_INPUT_LEN 3000
 typedef enum {
-    PLUS = 43,
-    MINUS = 45,
-    PROD = 42,
-    POW = 94,
-    FACT = 33,
-    BRACES_OPEN = 40,
-    BRACES_CLOSED = 41,
-    MOD = 37,
+    PLUS = (int) '+',
+    MINUS = (int) '-',
+    PROD = (int) '*',
+    DIV = (int) '/',
+    POW = (int) '^',
+    FACT = (int) '!',
+    BRACES_OPEN = (int) '(',
+    BRACES_CLOSED = (int) ')',
+    MOD = (int) '%',
     CONST = -1,
     VARIABLE = -2
 } operator;
@@ -47,7 +48,7 @@ char itoc(int i) {
 
 int operator_weight(operator op) {
     if (op == PLUS || op == MINUS) return 1;
-    if (op == PROD || op == MOD) return 2;
+    if (op == PROD || op == MOD || op == DIV) return 2;
     if (op == POW) return 3;
     if (op == FACT) return 4;
     if (op == BRACES_OPEN) return 5;
@@ -69,7 +70,7 @@ int should_replace(operator new, operator old) {
 
 
 int is_operator(char c) {
-    return c == PLUS || c == MINUS || c == PROD || c == POW || c == FACT || c == BRACES_OPEN || c == BRACES_CLOSED;
+    return c == PLUS || c == MINUS || c == PROD || c == POW || c == FACT || c == DIV || c == BRACES_OPEN || c == BRACES_CLOSED;
 }
 
 long long fact(long long x) {
@@ -78,9 +79,16 @@ long long fact(long long x) {
 }
 
 void free_operation(operation *op) {
-    if (op == NULL) return;
-    free_operation(op->left);
-    free_operation(op->right);
+//    if (op == NULL) return;
+//    if (op->left != NULL) {
+//        free_operation(op->left);
+//        op->left = NULL;
+//    }
+//    if (op->right != NULL) {
+//        free_operation(op->right);
+//        op->right = NULL;
+//    }
+//    op = NULL;
 }
 
 void free_operations_list(operation_linked *last_operation) {
@@ -111,6 +119,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
             case PLUS:
             case MINUS:
             case PROD:
+            case DIV:
             case POW:
             case MOD: {
                 operation *left = (operation *) malloc(sizeof(operation));
@@ -200,6 +209,8 @@ long long calculate(operation *op) {
             return calculate(op->left) - calculate(op->right);
         case PROD:
             return calculate(op->left) * calculate(op->right);
+        case DIV:
+            return calculate(op->left) / calculate(op->right);
         case POW:
             return pow(calculate(op->left), calculate(op->right));
         case FACT:
@@ -272,7 +283,8 @@ int main() {
                     output_queue[queue_size++][0] = (char) op;
             }
 
-            operator_stack[operator_stack_size++] = (operator) input[i];
+            if ((operator) input[i] != BRACES_CLOSED) operator_stack[operator_stack_size++] = (operator) input[i];
+            else operator_stack_size--;
         }
 
     }
