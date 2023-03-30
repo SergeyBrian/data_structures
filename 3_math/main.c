@@ -24,7 +24,7 @@ typedef enum {
 struct operation {
     struct operation *left;
     struct operation *right;
-    long long value;
+    double value;
     operator op;
 };
 
@@ -73,7 +73,7 @@ int is_operator(char c) {
     return c == PLUS || c == MINUS || c == PROD || c == POW || c == FACT || c == DIV || c == BRACES_OPEN || c == BRACES_CLOSED;
 }
 
-long long fact(long long x) {
+double fact(double x) {
     if (x == 0) return 1;
     return (x * fact(x - 1));
 }
@@ -142,7 +142,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                     free(previous_ptr->previous);
 
                 } else {
-                    right->value = atoll(queue[j]);
+                    right->value = atof(queue[j]);
                     right->op = CONST;
 
                     queue[j] = NULL;
@@ -150,7 +150,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                     while (--j >= 0 && (queue[j] == NULL || !isdigit(queue[j][0])));
 
                     if (j >= 0) {
-                        left->value = atoll(queue[j]);
+                        left->value = atof(queue[j]);
                         left->op = CONST;
                         queue[j] = NULL;
                     } else {
@@ -178,7 +178,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                 if (j < 0) {
                     //
                 } else {
-                    left->value = atoll(queue[j]);
+                    left->value = atof(queue[j]);
                     left->op = CONST;
                     left->left = NULL;
                     left->right = NULL;
@@ -201,7 +201,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
     return result;
 }
 
-long long calculate(operation *op) {
+double calculate(operation *op) {
     switch (op->op) {
         case PLUS:
             return calculate(op->left) + calculate(op->right);
@@ -216,7 +216,7 @@ long long calculate(operation *op) {
         case FACT:
             return fact(calculate(op->left));
         case MOD:
-            return calculate(op->left) % calculate(op->right);
+            return (double) ((int) calculate(op->left) % (int) calculate(op->right));
         case CONST:
             return op->value;
     }
@@ -301,7 +301,7 @@ int main() {
         printf("%s ", output_queue[i]);
     }
     operation *operation_tree = queue_to_tree(output_queue, queue_size);
-    printf("\n%lld\n", calculate(operation_tree));
+    printf("\n%g\n", calculate(operation_tree));
 
     return 0;
 }
