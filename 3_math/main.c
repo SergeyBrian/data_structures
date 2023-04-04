@@ -5,6 +5,7 @@
 #include <math.h>
 
 #define MAX_INPUT_LEN 3000
+#define MAX_QUEUE_SIZE 30
 typedef enum {
     PLUS = (int) '+',
     MINUS = (int) '-',
@@ -38,13 +39,23 @@ struct operation_linked {
 
 typedef struct operation_linked operation_linked;
 
+int malloc_count;
+int calloc_count;
+int free_count;
 
-int ctoi(char c) {
-    return (int) (c - 48);
+void *mmalloc(size_t size) {
+    malloc_count++;
+    return malloc(size);
 }
 
-char itoc(int i) {
-    return (char) (i + 48);
+void *mcalloc(size_t size, int count) {
+    calloc_count++;
+    return calloc(size, count);
+}
+
+void mfree(void *ptr) {
+    free_count++;
+    free(ptr);
 }
 
 int operator_weight(operator op) {
@@ -79,27 +90,27 @@ double fact(double x) {
 }
 
 void free_operation(operation *op) {
-//    if (op == NULL) return;
-//    if (op->left != NULL) {
-//        free_operation(op->left);
-//        op->left = NULL;
-//    }
-//    if (op->right != NULL) {
-//        free_operation(op->right);
-//        op->right = NULL;
-//    }
-//    op = NULL;
+    if (op == NULL) return;
+    if (op->left != NULL) {
+        free_operation(op->left);
+        op->left = NULL;
+    }
+    if (op->right != NULL) {
+        free_operation(op->right);
+        op->right = NULL;
+    }
+    mfree(op);
+    op = NULL;
 }
 
 void free_operations_list(operation_linked *last_operation) {
     if (last_operation->previous != NULL) free_operations_list(last_operation->previous);
-    free_operation(last_operation->op);
-    free(last_operation);
+    mfree(last_operation);
 }
 
-operation *queue_to_tree(char *queue[30], int queue_size) {
+operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
     operation *result = NULL;
-    operation_linked *operation_list = (operation_linked *) malloc(sizeof(operation_linked));
+    operation_linked *operation_list = (operation_linked *) mmalloc(sizeof(operation_linked));
 
     operation_linked *last_operation = operation_list;
 
@@ -110,7 +121,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
             continue;
         }
 
-        operation *new_op = (operation *) malloc(sizeof(operation));
+        operation *new_op = (operation *) mmalloc(sizeof(operation));
         result = new_op;
         last_operation->op = new_op;
         operator op = (operator) queue[i][0];
@@ -122,13 +133,15 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
             case DIV:
             case POW:
             case MOD: {
-                operation *left = (operation *) malloc(sizeof(operation));
-                operation *right = (operation *) malloc(sizeof(operation));
+                operation *left = (operation *) mmalloc(sizeof(operation));
+                operation *right = (operation *) mmalloc(sizeof(operation));
                 new_op->left = left;
                 new_op->right = right;
 
                 int j = i;
                 while (--j >= 0 && (queue[j] != NULL && !isdigit(queue[j][0])));
+
+                int is_previous_null = queue[j] == NULL;
 
                 if (j >= 0) {
                     if (queue[j] != NULL) {
@@ -139,12 +152,21 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                     } else {
                         if (last_operation->previous == NULL || last_operation->previous->op == NULL)
                             incorrect_input_exit();
+                        mfree(right);
                         new_op->right = last_operation->previous->op;
                         operation_linked *previous_ptr = last_operation->previous;
-                        last_operation->previous = last_operation->previous->previous;
+//                        last_operation->previous = last_operation->previous->previous;
+//                        free_operations_list(previous_ptr);
                     }
 
-                    while (--j >= 0 && (queue[j] == NULL || !isdigit(queue[j][0])));
+                    while (--j >= 0) {
+                        if (is_previous_null && (last_operation->previous->previous != NULL &&
+                                                 last_operation->previous->previous->op->right != NULL)) {
+                            if (queue[j] != NULL && isdigit(queue[j][0])) break;
+                        } else {
+                            if (queue[j] == NULL || isdigit(queue[j][0])) break;
+                        }
+                    }
 
                     if (j >= 0 && queue[j] != NULL) {
                         left->value = atof(queue[j]);
@@ -153,13 +175,17 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                     } else {
                         if (last_operation->previous == NULL) incorrect_input_exit();
                         if (last_operation->previous->op == NULL) incorrect_input_exit();
-                        free(left);
-                        left = last_operation->previous->op;
+                        mfree(left);
+                        if (is_previous_null) {
+                            if (last_operation->previous->previous == NULL) incorrect_input_exit();
+                            left = last_operation->previous->previous->op;
+                        }
+                        else {
+                            left = last_operation->previous->op;
+                        }
                         operation_linked *previous_ptr = last_operation->previous;
-                        last_operation->previous = last_operation->previous->previous;
-                        free(previous_ptr);
-                        new_op->left = right;
-                        new_op->right = left;
+//                        last_operation->previous = last_operation->previous->previous;
+                        new_op->left = left;
                     }
                 } else {
                     if (last_operation->previous == NULL || last_operation->previous->op == NULL ||
@@ -168,16 +194,14 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                     new_op->right = last_operation->previous->op;
                     new_op->left = last_operation->previous->previous->op;
                     operation_linked *previous_ptr = last_operation->previous;
-                    last_operation->previous = last_operation->previous->previous->previous;
-//                    free(previous_ptr->previous->previous);
-//                    free(previous_ptr->previous);
+//                    last_operation->previous = last_operation->previous->previous->previous;
                 }
 
                 break;
             }
             case UNARY_MINUS:
             case FACT: {
-                operation *left = (operation *) malloc(sizeof(operation));
+                operation *left = (operation *) mmalloc(sizeof(operation));
                 new_op->left = left;
                 new_op->right = NULL;
                 int j = i;
@@ -191,12 +215,11 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
                 } else {
                     if (last_operation->previous == NULL) incorrect_input_exit();
                     if (last_operation->previous->op == NULL) incorrect_input_exit();
-                    free(left);
+                    mfree(left);
 
                     left = last_operation->previous->op;
                     operation_linked *previous_ptr = last_operation->previous;
-                    last_operation->previous = last_operation->previous->previous;
-                    free(previous_ptr);
+//                    last_operation->previous = last_operation->previous->previous;
 
                     new_op->left = left;
                 }
@@ -215,7 +238,7 @@ operation *queue_to_tree(char *queue[30], int queue_size) {
         new_op->op = op;
 
         operation_linked *last_operation_ptr = last_operation;
-        last_operation = (operation_linked *) malloc(sizeof(operation_linked));
+        last_operation = (operation_linked *) mmalloc(sizeof(operation_linked));
         last_operation->previous = last_operation_ptr;
     }
 
@@ -247,6 +270,10 @@ double calculate(operation *op) {
 }
 
 int main() {
+    malloc_count = 0;
+    calloc_count = 0;
+    free_count = 0;
+
     char input[MAX_INPUT_LEN * 100 + 1];
 
     fgets(input, 10000, stdin);
@@ -276,9 +303,9 @@ int main() {
     operator operator_stack[20];
     int operator_stack_size = 0;
 
-    char *output_queue[30];
-    for (int i = 0; i < 30; i++) {
-        output_queue[i] = (char *) calloc(sizeof(char), 101);
+    char *output_queue[MAX_QUEUE_SIZE];
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        output_queue[i] = (char *) mcalloc(sizeof(char), 101);
     }
     int queue_size = 0;
 
@@ -329,6 +356,16 @@ int main() {
     }
     operation *operation_tree = queue_to_tree(output_queue, queue_size);
     printf("\n%g\n", calculate(operation_tree));
+
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        mfree(output_queue[i]);
+    }
+
+    free_operation(operation_tree);
+
+    printf("---------------------------\n");
+    printf("malloc: %d\ncalloc: %d\nfree: %d\nmalloc+calloc-free: %d\n", malloc_count, calloc_count, free_count,
+           malloc_count + calloc_count - free_count);
 
     return 0;
 }
