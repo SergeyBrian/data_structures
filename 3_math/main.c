@@ -35,7 +35,7 @@ struct operation {
 typedef struct {
     char c;
     int value;
-} variable ;
+} variable;
 
 variable variables[ALPHABET_LEN];
 
@@ -45,6 +45,8 @@ struct operation_linked {
     struct operation_linked *previous;
     operation *op;
 };
+
+operation *operation_tree;
 
 typedef struct operation_linked operation_linked;
 
@@ -157,8 +159,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                         if (isdigit(queue[j][0])) {
                             right->value = atof(queue[j]);
                             right->op = CONST;
-                        }
-                        else {
+                        } else {
                             right->value = queue[j][0];
                             right->op = VARIABLE;
                         }
@@ -187,8 +188,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                         if (isdigit(queue[j][0])) {
                             left->value = atof(queue[j]);
                             left->op = CONST;
-                        }
-                        else {
+                        } else {
                             left->value = queue[j][0];
                             left->op = VARIABLE;
                         }
@@ -201,8 +201,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                         if (is_previous_null) {
                             if (last_operation->previous->previous == NULL) incorrect_input_exit();
                             left = last_operation->previous->previous->op;
-                        }
-                        else {
+                        } else {
                             left = last_operation->previous->op;
                         }
                         operation_linked *previous_ptr = last_operation->previous;
@@ -235,8 +234,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                         left->op = CONST;
                         left->left = NULL;
                         left->right = NULL;
-                    }
-                    else {
+                    } else {
                         left->value = queue[j][0];
                         left->op = VARIABLE;
                     }
@@ -274,7 +272,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
     return result;
 }
 
-int parse(char **output_queue, char *input, int *queue_size) {
+void parse(char **output_queue, char *input, int *queue_size) {
     int input_len = strlen(input) + 1;
     operator operator_stack[20];
     int operator_stack_size = 0;
@@ -324,11 +322,6 @@ int parse(char **output_queue, char *input, int *queue_size) {
                 output_queue[(*queue_size)++][0] = (char) op;
         }
     }
-
-    for (int i = 0; i < *queue_size; i++) {
-        printf("%s ", output_queue[i]);
-    }
-    return 0;
 }
 
 double calculate(operation *op) {
@@ -356,54 +349,107 @@ double calculate(operation *op) {
     }
 }
 
+void print_prf(operation *op) {
+    switch (op->op) {
+        case VARIABLE:
+            printf("%c ", (int) op->value);
+            break;
+        case CONST:
+            printf("%g ", op->value);
+            break;
+        default:
+            printf("%c ", op->op);
+            break;
+    }
+    if (op->left != NULL) print_prf(op->left);
+    if (op->right != NULL) print_prf(op->right);
+}
+
+void print_pst(operation *op) {
+    if (op->left != NULL) print_pst(op->left);
+    if (op->right != NULL) print_pst(op->right);
+    switch (op->op) {
+        case VARIABLE:
+            printf("%c ", (int) op->value);
+            break;
+        case CONST:
+            printf("%g ", op->value);
+            break;
+        default:
+            printf("%c ", op->op);
+            break;
+    }
+}
+
+void get_commands(char *filename) {
+    FILE *file = fopen(filename, "r");
+
+    char buf[MAX_INPUT_LEN];
+    while (fgets(buf, MAX_INPUT_LEN, file) != NULL) {
+        char *input = strchr(buf, ' ');
+        if (input) {
+            input[0] = '\0';
+            input++;
+        }
+        char *command = buf;
+        if (command[strlen(command) - 1] == '\n') command[strlen(command) - 1] = '\0';
+        if (strcmp(command, "parse") == 0) {
+            int input_len = strlen(input) + 1;
+            int operators_count = 0;
+            int space_count = 0;
+
+            for (int i = 0; i < input_len; i++) {
+                if (input[i] == '\n') {
+                    input[i] = '\0';
+                    break;
+                }
+                if (input[i] == '\0') break;
+                if (!isdigit(input[i]) && !isalpha(input[i])) {
+                    if (!is_operator(input[i]) && input[i] != ' ' && input[i] != '.') {
+                        incorrect_input_exit();
+                    }
+                    if (input[i] == ' ') {
+                        space_count++;
+                        continue;
+                    }
+                    operators_count++;
+                }
+            }
+
+
+            char *output_queue[MAX_QUEUE_SIZE];
+            int queue_size;
+
+            parse(output_queue, input, &queue_size);
+            operation_tree = queue_to_tree(output_queue, queue_size);
+
+            for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+                mfree(output_queue[i]);
+            }
+        } else if (strcmp(command, "save_prf") == 0) {
+            printf("\n");
+            if (!operation_tree) {
+                printf("not_loaded\n");
+                exit(1);
+            }
+            print_prf(operation_tree);
+        } else if (strcmp(command, "save_pst") == 0) {
+            printf("\n");
+            if (!operation_tree) {
+                printf("not_loaded\n");
+                exit(1);
+            }
+            print_pst(operation_tree);
+        }
+    }
+}
+
 int main() {
     malloc_count = 0;
     calloc_count = 0;
     free_count = 0;
 
-    char input[MAX_INPUT_LEN * 100 + 1];
-
-    fgets(input, 10000, stdin);
-
-    int input_len = strlen(input) + 1;
-    int operators_count = 0;
-    int space_count = 0;
-
-    for (int i = 0; i < input_len; i++) {
-        if (input[i] == '\n') {
-            input[i] = '\0';
-            break;
-        }
-        if (input[i] == '\0') break;
-        if (!isdigit(input[i]) && !isalpha(input[i])) {
-            if (!is_operator(input[i]) && input[i] != ' ' && input[i] != '.') {
-                incorrect_input_exit();
-            }
-            if (input[i] == ' ') {
-                space_count++;
-                continue;
-            }
-            operators_count++;
-        }
-    }
-
-
-    char *output_queue[MAX_QUEUE_SIZE];
-    int queue_size;
-
-    parse(output_queue, input, &queue_size);
-
-    operation *operation_tree = queue_to_tree(output_queue, queue_size);
-
-
-    variables['a'].value = 1;
-    variables['b'].value = 2;
-    variables['c'].value = 3;
-    printf("\n%g\n", calculate(operation_tree));
-
-    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
-        mfree(output_queue[i]);
-    }
+    get_commands("../input.txt");
 
     free_operation(operation_tree);
 
