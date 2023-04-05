@@ -6,6 +6,8 @@
 
 #define MAX_INPUT_LEN 3000
 #define MAX_QUEUE_SIZE 30
+#define ALPHABET_LEN 2000
+
 typedef enum {
     PLUS = (int) '+',
     MINUS = (int) '-',
@@ -16,8 +18,8 @@ typedef enum {
     BRACES_OPEN = (int) '(',
     BRACES_CLOSED = (int) ')',
     MOD = (int) '%',
+    VARIABLE = 'x',
     CONST = -1,
-    VARIABLE = -2,
     UNARY_MINUS = 64
 } operator;
 
@@ -29,6 +31,13 @@ struct operation {
     double value;
     operator op;
 };
+
+typedef struct {
+    char c;
+    int value;
+} variable ;
+
+variable variables[ALPHABET_LEN];
 
 typedef struct operation operation;
 
@@ -117,7 +126,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
     operation_list->previous = NULL;
 
     for (int i = 0; i < queue_size; i++) {
-        if (isdigit(queue[i][0])) {
+        if (isdigit(queue[i][0]) || isalpha(queue[i][0])) {
             continue;
         }
 
@@ -139,14 +148,20 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                 new_op->right = right;
 
                 int j = i;
-                while (--j >= 0 && (queue[j] != NULL && !isdigit(queue[j][0])));
+                while (--j >= 0 && (queue[j] != NULL && !isalnum(queue[j][0])));
 
                 int is_previous_null = queue[j] == NULL;
 
                 if (j >= 0) {
                     if (queue[j] != NULL) {
-                        right->value = atof(queue[j]);
-                        right->op = CONST;
+                        if (isdigit(queue[j][0])) {
+                            right->value = atof(queue[j]);
+                            right->op = CONST;
+                        }
+                        else {
+                            right->value = queue[j][0];
+                            right->op = VARIABLE;
+                        }
 
                         queue[j] = NULL;
                     } else {
@@ -162,15 +177,22 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                     while (--j >= 0) {
                         if (is_previous_null && (last_operation->previous->previous != NULL &&
                                                  last_operation->previous->previous->op->right != NULL)) {
-                            if (queue[j] != NULL && isdigit(queue[j][0])) break;
+                            if (queue[j] != NULL && isalnum(queue[j][0])) break;
                         } else {
-                            if (queue[j] == NULL || isdigit(queue[j][0])) break;
+                            if (queue[j] == NULL || isalnum(queue[j][0])) break;
                         }
                     }
 
                     if (j >= 0 && queue[j] != NULL) {
-                        left->value = atof(queue[j]);
-                        left->op = CONST;
+                        if (isdigit(queue[j][0])) {
+                            left->value = atof(queue[j]);
+                            left->op = CONST;
+                        }
+                        else {
+                            left->value = queue[j][0];
+                            left->op = VARIABLE;
+                        }
+
                         queue[j] = NULL;
                     } else {
                         if (last_operation->previous == NULL) incorrect_input_exit();
@@ -205,13 +227,19 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                 new_op->left = left;
                 new_op->right = NULL;
                 int j = i;
-                while (--j >= 0 && (queue[j] != NULL && !isdigit(queue[j][0])));
+                while (--j >= 0 && (queue[j] != NULL && !isalnum(queue[j][0])));
 
                 if (j >= 0 && queue[j] != NULL) {
-                    left->value = atof(queue[j]);
-                    left->op = CONST;
-                    left->left = NULL;
-                    left->right = NULL;
+                    if (isdigit(queue[j][0])) {
+                        left->value = atof(queue[j]);
+                        left->op = CONST;
+                        left->left = NULL;
+                        left->right = NULL;
+                    }
+                    else {
+                        left->value = queue[j][0];
+                        left->op = VARIABLE;
+                    }
                 } else {
                     if (last_operation->previous == NULL) incorrect_input_exit();
                     if (last_operation->previous->op == NULL) incorrect_input_exit();
@@ -246,6 +274,63 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
     return result;
 }
 
+int parse(char **output_queue, char *input, int *queue_size) {
+    int input_len = strlen(input) + 1;
+    operator operator_stack[20];
+    int operator_stack_size = 0;
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        output_queue[i] = (char *) mcalloc(sizeof(char), 101);
+    }
+    *queue_size = 0;
+
+    char current_number[100] = "";
+    int current_number_size = 0;
+
+    for (int i = 0; i < input_len; i++) {
+        if (isdigit(input[i]) || input[i] == '.' || isalpha(input[i])) {
+            current_number[current_number_size++] = input[i];
+            current_number[current_number_size] = '\0';
+            continue;
+        }
+
+        if (current_number_size) {
+            strcpy(output_queue[(*queue_size)++], current_number);
+            current_number_size = 0;
+        }
+
+        if (input[i] == ' ') continue;
+
+        if (is_operator(input[i])) {
+            if (input[i] == (operator) MINUS && (i == 0 || input[i - 1] == (operator) BRACES_OPEN)) {
+                input[i] = (char) UNARY_MINUS;
+            }
+            while (operator_stack_size &&
+                   (should_replace((operator) input[i], operator_stack[operator_stack_size - 1]))) {
+                operator op = operator_stack[--operator_stack_size];
+                if (op != BRACES_OPEN && op != BRACES_CLOSED)
+                    output_queue[(*queue_size)++][0] = (char) op;
+            }
+
+            if ((operator) input[i] != BRACES_CLOSED) operator_stack[operator_stack_size++] = (operator) input[i];
+            else operator_stack_size--;
+        }
+
+    }
+
+    if (operator_stack_size) {
+        while (operator_stack_size) {
+            operator op = operator_stack[--operator_stack_size];
+            if (op != BRACES_OPEN && op != BRACES_CLOSED)
+                output_queue[(*queue_size)++][0] = (char) op;
+        }
+    }
+
+    for (int i = 0; i < *queue_size; i++) {
+        printf("%s ", output_queue[i]);
+    }
+    return 0;
+}
+
 double calculate(operation *op) {
     switch (op->op) {
         case PLUS:
@@ -266,6 +351,8 @@ double calculate(operation *op) {
             return op->value;
         case UNARY_MINUS:
             return -(calculate(op->left));
+        case VARIABLE:
+            return (double) variables[(int) op->value].value;
     }
 }
 
@@ -288,7 +375,7 @@ int main() {
             break;
         }
         if (input[i] == '\0') break;
-        if (!isdigit(input[i])) {
+        if (!isdigit(input[i]) && !isalpha(input[i])) {
             if (!is_operator(input[i]) && input[i] != ' ' && input[i] != '.') {
                 incorrect_input_exit();
             }
@@ -300,61 +387,18 @@ int main() {
         }
     }
 
-    operator operator_stack[20];
-    int operator_stack_size = 0;
 
     char *output_queue[MAX_QUEUE_SIZE];
-    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
-        output_queue[i] = (char *) mcalloc(sizeof(char), 101);
-    }
-    int queue_size = 0;
+    int queue_size;
 
-    char current_number[100] = "";
-    int current_number_size = 0;
+    parse(output_queue, input, &queue_size);
 
-    for (int i = 0; i < input_len; i++) {
-        if (isdigit(input[i]) || input[i] == '.') {
-            current_number[current_number_size++] = input[i];
-            current_number[current_number_size] = '\0';
-            continue;
-        }
-
-        if (current_number_size) {
-            strcpy(output_queue[queue_size++], current_number);
-            current_number_size = 0;
-        }
-
-        if (input[i] == ' ') continue;
-
-        if (is_operator(input[i])) {
-            if (input[i] == (operator) MINUS && (i == 0 || input[i - 1] == (operator) BRACES_OPEN)) {
-                input[i] = (char) UNARY_MINUS;
-            }
-            while (operator_stack_size &&
-                   (should_replace((operator) input[i], operator_stack[operator_stack_size - 1]))) {
-                operator op = operator_stack[--operator_stack_size];
-                if (op != BRACES_OPEN && op != BRACES_CLOSED)
-                    output_queue[queue_size++][0] = (char) op;
-            }
-
-            if ((operator) input[i] != BRACES_CLOSED) operator_stack[operator_stack_size++] = (operator) input[i];
-            else operator_stack_size--;
-        }
-
-    }
-
-    if (operator_stack_size) {
-        while (operator_stack_size) {
-            operator op = operator_stack[--operator_stack_size];
-            if (op != BRACES_OPEN && op != BRACES_CLOSED)
-                output_queue[queue_size++][0] = (char) op;
-        }
-    }
-
-    for (int i = 0; i < queue_size; i++) {
-        printf("%s ", output_queue[i]);
-    }
     operation *operation_tree = queue_to_tree(output_queue, queue_size);
+
+
+    variables['a'].value = 1;
+    variables['b'].value = 2;
+    variables['c'].value = 3;
     printf("\n%g\n", calculate(operation_tree));
 
     for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
@@ -363,7 +407,7 @@ int main() {
 
     free_operation(operation_tree);
 
-    printf("---------------------------\n");
+    printf("\n---------------------------\n");
     printf("malloc: %d\ncalloc: %d\nfree: %d\nmalloc+calloc-free: %d\n", malloc_count, calloc_count, free_count,
            malloc_count + calloc_count - free_count);
 
