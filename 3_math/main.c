@@ -176,8 +176,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
                     }
 
                     while (--j >= 0) {
-                        if (is_previous_null && (last_operation->previous->previous != NULL &&
-                                                 last_operation->previous->previous->op->right != NULL)) {
+                        if (is_previous_null) {
                             if (queue[j] != NULL && isalnum(queue[j][0])) break;
                         } else {
                             if (queue[j] == NULL || isalnum(queue[j][0])) break;
@@ -440,6 +439,17 @@ void get_commands(char *filename) {
                 exit(1);
             }
             print_pst(operation_tree);
+        } else if (strcmp(command, "eval") == 0) {
+            char *token = strtok(input, ",");
+
+            while (token != NULL) {
+                char var_name = token[0];
+                int value = atoi(token + 2);
+
+                variables[var_name].value = value;
+                token = strtok(NULL, ",");
+            }
+            printf("\n%g\n", calculate(operation_tree));
         }
     }
 }
