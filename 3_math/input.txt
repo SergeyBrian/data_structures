@@ -1,4 +1,4 @@
-parse x+2*y
+load_prf + x * 2 y
 save_prf
 save_pst
 eval x=4,y=3

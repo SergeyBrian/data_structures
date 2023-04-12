@@ -54,6 +54,9 @@ int malloc_count;
 int calloc_count;
 int free_count;
 
+void load_prf(char *input);
+void load_pst(char *input);
+
 void *mmalloc(size_t size) {
     malloc_count++;
     return malloc(size);
@@ -119,7 +122,15 @@ void free_operations_list(operation_linked *last_operation) {
     mfree(last_operation);
 }
 
-operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size) {
+operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_reversed) {
+    if (is_reversed) {
+        for (int i = 0; i < queue_size / 2; i++) {
+            char *temp = queue[i];
+            queue[i] = queue[queue_size - i - 1];
+            queue[queue_size - i - 1] = temp;
+        }
+    }
+
     operation *result = NULL;
     operation_linked *operation_list = (operation_linked *) mmalloc(sizeof(operation_linked));
 
@@ -380,6 +391,30 @@ void print_pst(operation *op) {
     }
 }
 
+void validate_input(char *input) {
+    int input_len = strlen(input) + 1;
+    int operators_count = 0;
+    int space_count = 0;
+
+    for (int i = 0; i < input_len; i++) {
+        if (input[i] == '\n') {
+            input[i] = '\0';
+            break;
+        }
+        if (input[i] == '\0') break;
+        if (!isdigit(input[i]) && !isalpha(input[i])) {
+            if (!is_operator(input[i]) && input[i] != ' ' && input[i] != '.') {
+                incorrect_input_exit();
+            }
+            if (input[i] == ' ') {
+                space_count++;
+                continue;
+            }
+            operators_count++;
+        }
+    }
+}
+
 void get_commands(char *filename) {
     FILE *file = fopen(filename, "r");
 
@@ -393,34 +428,14 @@ void get_commands(char *filename) {
         char *command = buf;
         if (command[strlen(command) - 1] == '\n') command[strlen(command) - 1] = '\0';
         if (strcmp(command, "parse") == 0) {
-            int input_len = strlen(input) + 1;
-            int operators_count = 0;
-            int space_count = 0;
-
-            for (int i = 0; i < input_len; i++) {
-                if (input[i] == '\n') {
-                    input[i] = '\0';
-                    break;
-                }
-                if (input[i] == '\0') break;
-                if (!isdigit(input[i]) && !isalpha(input[i])) {
-                    if (!is_operator(input[i]) && input[i] != ' ' && input[i] != '.') {
-                        incorrect_input_exit();
-                    }
-                    if (input[i] == ' ') {
-                        space_count++;
-                        continue;
-                    }
-                    operators_count++;
-                }
-            }
+            validate_input(input);
 
 
             char *output_queue[MAX_QUEUE_SIZE];
             int queue_size;
 
             parse(output_queue, input, &queue_size);
-            operation_tree = queue_to_tree(output_queue, queue_size);
+            operation_tree = queue_to_tree(output_queue, queue_size, 0);
 
             for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
                 mfree(output_queue[i]);
@@ -450,7 +465,76 @@ void get_commands(char *filename) {
                 token = strtok(NULL, ",");
             }
             printf("\n%g\n", calculate(operation_tree));
+        } else if (strcmp(command, "load_prf") == 0) {
+            load_prf(input);
+        } else if (strcmp(command, "load_pst") == 0) {
+            load_pst(input);
         }
+    }
+}
+
+void simple_parse(char **output_queue, char *input, int *queue_size) {
+    int input_len = strlen(input) + 1;
+    operator operator_stack[20];
+    int operator_stack_size = 0;
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        output_queue[i] = (char *) mcalloc(sizeof(char), 101);
+    }
+
+    *queue_size = 0;
+
+    char current_number[100] = "";
+    int current_number_size = 0;
+
+
+    for (int i = 0; i < input_len; i++) {
+        if (isdigit(input[i]) || input[i] == '.' || isalpha(input[i])) {
+            current_number[current_number_size++] = input[i];
+            current_number[current_number_size] = '\0';
+            continue;
+        }
+
+        if (current_number_size) {
+            strcpy(output_queue[(*queue_size)++], current_number);
+            current_number_size = 0;
+        }
+
+        if (input[i] == ' ') continue;
+
+        if (is_operator(input[i])) {
+            output_queue[(*queue_size)++][0] = input[i];
+        }
+
+        if ((operator) input[i] != BRACES_CLOSED) operator_stack[operator_stack_size++] = (operator) input[i];
+        else operator_stack_size--;
+    }
+}
+
+void load_prf(char *input) {
+    validate_input(input);
+
+    char *output_queue[MAX_QUEUE_SIZE];
+    int queue_size;
+
+    simple_parse(output_queue, input, &queue_size);
+    operation_tree = queue_to_tree(output_queue, queue_size, 11);
+
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        mfree(output_queue[i]);
+    }
+}
+
+void load_pst(char *input) {
+    validate_input(input);
+
+    char *output_queue[MAX_QUEUE_SIZE];
+    int queue_size;
+
+    simple_parse(output_queue, input, &queue_size);
+    operation_tree = queue_to_tree(output_queue, queue_size, 0);
+
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        mfree(output_queue[i]);
     }
 }
 
