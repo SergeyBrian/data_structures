@@ -288,6 +288,7 @@ void list_merge(List *dest, List *src) {
 }
 
 void destroy_node(Node *node) {
+    if (node == NULL) return;
     if (node->next != NULL) {
         destroy_node(node->next);
     }
