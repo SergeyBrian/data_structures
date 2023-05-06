@@ -17,4 +17,6 @@ void destroy_table(HashTable *table);
 
 void hash_table_insert(HashTable *table, char *key, char *value);
 
+char *hash_table_find(HashTable *table, char *key);
+
 #endif //INC_4_HASHTABLE_HASHTABLE_H

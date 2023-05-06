@@ -53,3 +53,18 @@ void hash_table_insert(HashTable *table, char *key, char *value) {
 
     table->nodes[index] = node_create(key, value);
 }
+
+char *find_collision(Node *node, char *key) {
+    if (strcmp(node->key, key) != 0) return find_collision(node->next_collision, key);
+    return node->value;
+}
+
+char *hash_table_find(HashTable *table, char *key) {
+    unsigned long index = adler32(key, strlen(key)) % table->capacity;
+    Node *node = table->nodes[index];
+    if (node->next_collision) {
+        return find_collision(node, key);
+    }
+
+    return node->value;
+}

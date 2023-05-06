@@ -10,5 +10,6 @@ int main() {
     hash_table_insert(table, "value_2", "sdlkfj");
     hash_table_insert(table, "value_3", "fuck");
     hash_table_insert(table, "value_5", "sorry");
+    printf("%s\n", hash_table_find(table, "value_3"));
     return 0;
 }
