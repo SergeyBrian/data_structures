@@ -1,6 +1,8 @@
 #ifndef INC_4_HASHTABLE_HASHTABLE_H
 #define INC_4_HASHTABLE_HASHTABLE_H
 
+#include <stdio.h>
+
 #include "node.h"
 #include "adler32.h"
 

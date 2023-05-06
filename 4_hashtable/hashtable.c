@@ -56,12 +56,19 @@ void hash_table_insert(HashTable *table, char *key, char *value) {
 
 char *find_collision(Node *node, char *key) {
     if (strcmp(node->key, key) != 0) return find_collision(node->next_collision, key);
-    return node->value;
+    if (strcmp(node->key, key) == 0) return node->value;
+    return NULL;
 }
 
 char *hash_table_find(HashTable *table, char *key) {
     unsigned long index = adler32(key, strlen(key)) % table->capacity;
     Node *node = table->nodes[index];
+
+    if (!node || strcmp(node->key, key) != 0) {
+        printf("Value with key %s not found\n", key);
+        return NULL;
+    }
+
     if (node->next_collision) {
         return find_collision(node, key);
     }
