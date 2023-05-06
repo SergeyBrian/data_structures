@@ -2,8 +2,8 @@
 
 Node *node_create(char *key, char *value) {
     Node *node = malloc(sizeof(Node));
-    node->key = calloc(sizeof(char), strlen(key));
-    node->value = calloc(sizeof(char), strlen(value));
+    node->key = calloc(sizeof(char), strlen(key) + 1);
+    node->value = calloc(sizeof(char), strlen(value) + 1);
     node->next_collision = NULL;
 
     strcpy(node->key, key);
@@ -24,6 +24,14 @@ void destroy_node(Node *node) {
     if (!node) return;
 
     if (node->next_collision) destroy_node(node->next_collision);
+
+    free(node->key);
+    free(node->value);
+    free(node);
+}
+
+void destroy_single_node(Node *node) {
+    if (!node) return;
 
     free(node->key);
     free(node->value);

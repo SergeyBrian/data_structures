@@ -21,4 +21,8 @@ void hash_table_insert(HashTable *table, char *key, char *value);
 
 char *hash_table_find(HashTable *table, char *key);
 
+void hash_table_remove(HashTable *table, char *key);
+
+void hash_table_print(HashTable *table);
+
 #endif //INC_4_HASHTABLE_HASHTABLE_H

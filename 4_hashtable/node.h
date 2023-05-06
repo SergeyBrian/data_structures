@@ -18,4 +18,6 @@ void destroy_node(Node *node);
 
 void add_collision(Node *node, char *key, char *value);
 
+void destroy_single_node(Node *node);
+
 #endif //INC_4_HASHTABLE_NODE_H
