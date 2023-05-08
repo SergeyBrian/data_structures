@@ -40,7 +40,7 @@ void test(int size) {
     printf("Insert time: %f\n", insert_time);
     printf("Collisions: %d\n", hash_table_get_collisions(table));
     printf("Fill factor: %f\n", hash_table_get_fill_factor(table));
-    printf("Resize count: %d", resize_count);
+    printf("Resize count: %d\n", resize_count);
     destroy_table(table);
 }
 
@@ -49,8 +49,8 @@ void parse();
 int main() {
 //    test(1500000);
     HashTable *table = hashtable_create(DEFAULT_CAPACITY);
-    while (1) {
-        char buf[MAX_COMMAND] = "";
+    char buf[MAX_COMMAND] = "";
+    while (strcmp(buf, "end")) {
         fgets(buf, MAX_COMMAND, stdin);
         buf[strlen(buf) - 1] = 0;
         buf[3] = 0;
@@ -60,6 +60,22 @@ int main() {
             char *value = strtok(NULL, ", ");
             hash_table_insert(&table, key, value);
         }
-        
+        if (strcmp(buf, "get") == 0) {
+            char *value = hash_table_find(table, args);
+            if (value) {
+                printf("%s\n", value);
+            }
+        }
+        if (strcmp(buf, "del") == 0) {
+            hash_table_remove(table, args);
+        }
+        if (strcmp(buf, "tes") == 0) {
+            test(atoi(args));
+        }
+        if (strcmp(buf, "pri") == 0) {
+            hash_table_print(table);
+        }
     }
+    destroy_table(table);
+    return 0;
 }
