@@ -142,10 +142,11 @@ void db_insert(List *DB, char *values_str) {
     list_append(DB, cast(long long, record));
 }
 
-int check_condition(DBRecord *rec, char *condition) {
+int check_equal_condition(DBRecord *rec, char *condition) {
     char *field_name;
     char *value;
     char *token;
+
     int result = 0;
 
     token = strtok(condition, "==");
@@ -196,6 +197,73 @@ int check_condition(DBRecord *rec, char *condition) {
             }
         }
     }
+
+    return result;
+}
+
+int check_compare_condition(DBRecord *rec, char *condition, char *type) {
+    char *field_name;
+    char *value;
+    char *token;
+
+    int result = 0;
+
+
+    token = strtok(condition, type);
+    if (token != NULL) {
+        field_name = token;
+        token = strtok(NULL, "'");
+        if (token != NULL) {
+            value = token;
+
+            if (strcmp(field_name, "money") == 0) {
+                if (COMPARE(rec->money, strtof(value, NULL), type[0])) {
+                    result = 1;
+                }
+            } else if (strcmp(field_name, "min_money") == 0) {
+                if (COMPARE(rec->min_money, strtof(value, NULL), type[0])) {
+                    result = 1;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+int check_in_condition(DBRecord *rec, char *condition) {
+    int result = 0;
+
+    char *token = strtok(condition, "/in/");
+    char *field_name;
+    if (token != NULL) {
+        field_name = token;
+        if (strcmp(field_name, "status")) error_exit(ERR_INVALID_COMMAND);
+        char *value_list = field_name + strlen(field_name) + 4;
+        char *value = strtok(value_list, "', ");
+        while (value) {
+            if (strcmp(value, status_names[rec->status]) == 0) result = 1;
+            value = strtok(NULL, "', ");
+        }
+
+        int x = 0;
+    }
+
+
+    return result;
+}
+
+int check_condition(DBRecord *rec, char *condition) {
+    int result = 0;
+    int compare_type = 0;
+
+    if (strstr(condition, "/in/") != NULL) return check_in_condition(rec, condition);
+    if (strstr(condition, "==") != NULL) return check_equal_condition(rec, condition);
+
+    if (strstr(condition, ">") != NULL) compare_type = 1;
+    if (strstr(condition, "<") != NULL) compare_type = 2;
+
+    if (compare_type) result = check_compare_condition(rec, condition, (compare_type == 1) ? ">" : "<");
 
     return result;
 

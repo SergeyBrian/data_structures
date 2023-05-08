@@ -17,6 +17,8 @@
         INDEX; \
     })
 
+#define COMPARE(a, b, op) ((op) == '<' ? (a) < (b) : (a) > (b))
+
 extern char error_messages[][100];
 
 extern int malloc_count;
