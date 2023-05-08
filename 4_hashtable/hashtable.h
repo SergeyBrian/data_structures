@@ -29,4 +29,6 @@ void hash_table_print(HashTable *table);
 
 double hash_table_get_fill_factor(HashTable *table);
 
+int hash_table_get_collisions(HashTable *table);
+
 #endif //INC_4_HASHTABLE_HASHTABLE_H

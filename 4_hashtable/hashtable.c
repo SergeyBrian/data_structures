@@ -137,3 +137,18 @@ void hash_table_print(HashTable *table) {
 double hash_table_get_fill_factor(HashTable *table) {
     return (double)table->node_count/table->capacity;
 }
+
+int hash_table_get_collisions(HashTable *table) {
+    int collisions = 0;
+
+    for (int i = 0; i < table->capacity; i++) {
+        Node *node = table->nodes[i];
+
+        while (node && node->next_collision) {
+            collisions++;
+            node = node->next_collision;
+        }
+    }
+
+    return collisions;
+}
