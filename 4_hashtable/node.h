@@ -6,6 +6,8 @@
 
 typedef struct Node Node;
 
+#define MAX_STRING 1000
+
 struct Node {
     char *key;
     char *value;

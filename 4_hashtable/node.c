@@ -1,9 +1,9 @@
 #include "node.h"
 
 Node *node_create(char *key, char *value) {
-    Node *node = malloc(sizeof(Node));
-    node->key = calloc(sizeof(char), strlen(key) + 1);
-    node->value = calloc(sizeof(char), strlen(value) + 1);
+    Node *node = (Node *) malloc(sizeof(Node));
+    node->key = (char *) calloc(sizeof(char), strlen(key) + 1);
+    node->value = (char *) calloc(sizeof(char), strlen(value) + 1);
     node->next_collision = NULL;
 
     strcpy(node->key, key);
