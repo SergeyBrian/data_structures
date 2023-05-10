@@ -55,4 +55,10 @@ void db_insert(List *DB, char *params);
 
 List *db_select(List *DB, int n, char *conditions);
 
+int db_remove(List *DB, int n, char *conditions);
+
+int db_update(List *DB, char *values, char *conditions);
+
+int db_uniq(List *DB, char *fields);
+
 #endif //INC_2_DATABASE_DB_H

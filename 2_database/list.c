@@ -139,6 +139,7 @@ void list_remove_first(List *list) {
     }
     list->length--;
     if (list->begin->next == NULL) {
+        mfree(list->begin);
         list->begin = NULL;
         return;
     }
@@ -332,7 +333,9 @@ void list_remove_value(List *list, long long value, int count) {
         if (it->value == value) {
             list_remove(list, pos);
             count--;
-            list_remove_value(list, value, count);
+            if (list->length) {
+                list_remove_value(list, value, count);
+            }
             return;
         }
         pos++;

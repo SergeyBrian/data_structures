@@ -53,13 +53,17 @@ List *db_init() {
     return list_init();
 }
 
+void record_destroy(DBRecord *rec) {
+    mfree(rec->first_name);
+    mfree(rec->last_name);
+    mfree(rec->middle_name);
+    mfree(rec);
+}
+
 void db_destroy(List *DB) {
     list_iter(DB) {
         DBRecord *rec = cast(DBRecord *, it->value);
-        mfree(rec->first_name);
-        mfree(rec->last_name);
-        mfree(rec->middle_name);
-        mfree(rec);
+        record_destroy(rec);
     }
     list_destroy(DB);
 }
@@ -70,9 +74,7 @@ typedef struct {
     char field_type;
 } FieldInfo;
 
-void db_insert(List *DB, char *values_str) {
-    DBRecord *record = mmalloc(sizeof(DBRecord));
-
+void record_set_values(DBRecord *record, char *values_str) {
     FieldInfo field_infos[] = {
             {"last_name",   &record->last_name,   's'},
             {"first_name",  &record->first_name,  's'},
@@ -138,6 +140,13 @@ void db_insert(List *DB, char *values_str) {
     }
 
     mfree(str_copy);
+}
+
+void db_insert(List *DB, char *values_str) {
+    DBRecord *record = mmalloc(sizeof(DBRecord));
+
+    record_set_values(record, values_str);
+
 
     list_append(DB, cast(long long, record));
 }
@@ -305,4 +314,96 @@ List *db_select(List *BD, int n, char *conditions) {
     }
 
     return result;
+}
+
+int db_remove(List *DB, int n, char *conditions) {
+    int count = 0;
+
+    list_iter(DB) {
+        if (n && count == n) {
+            break;
+        }
+
+        if (!validate_rec(cast(DBRecord *, it->value), conditions)) continue;
+        record_destroy(cast(DBRecord *, it->value));
+        list_remove_value(DB, it->value, 1);
+        count++;
+        if (!list_len(DB)) break;
+    }
+
+    return count;
+}
+
+int db_update(List *DB, char *values, char *conditions) {
+    int count = 0;
+
+    list_iter(DB) {
+        DBRecord *rec = cast(DBRecord *, it->value);
+        if (!validate_rec(rec, conditions)) continue;
+        record_set_values(rec, values);
+        count++;
+    }
+
+    return count;
+}
+
+int db_uniq(List *DB, char *fields) {
+    int count = 0;
+
+    int remove_list_size = 0;
+    char *remove_list[1000];
+    int remove_counts[1000];
+    for (int i = 0; i < 1000; i++) {
+        remove_list[i] = calloc(sizeof(char), MAX_INPUT);
+    }
+
+    list_iter(DB) {
+        char *tmp_fields = mstrdup(fields);
+        char *save;
+        char *field = strtok_r(tmp_fields, ",", &save);
+        DBRecord *rec = cast(DBRecord *, it->value);
+        char condition[MAX_INPUT] = "";
+        List *matches = NULL;
+        while (field) {
+            sprintf(condition+strlen(condition), "%s==", field);
+            if (strcmp(field, "first_name") == 0) {
+                sprintf(condition + strlen(condition), "%s,", rec->first_name);
+            }
+            else if (strcmp(field, "middle_name") == 0) {
+                sprintf(condition + strlen(condition), "%s,", rec->middle_name);
+            }
+            else if (strcmp(field, "last_name") == 0) {
+                sprintf(condition + strlen(condition), "%s,", rec->last_name);
+            }
+            else if (strcmp(field, "phone") == 0) {
+                sprintf(condition + strlen(condition), "%llu,", rec->phone);
+            }
+            else if (strcmp(field, "money") == 0) {
+                sprintf(condition + strlen(condition), "%g,", rec->money);
+            }
+            else if (strcmp(field, "min_money") == 0) {
+                sprintf(condition + strlen(condition), "%g,", rec->min_money);
+            }
+            else if (strcmp(field, "status") == 0) {
+                sprintf(condition + strlen(condition), "%s,", status_names[rec->status]);
+            }
+            field = strtok_r(NULL, ",", &save);
+        }
+        condition[strlen(condition)] = 0;
+        matches = db_select(DB, 0, condition);
+
+        int match_count = list_len(matches);
+        if (match_count > 1) {
+            strcpy(remove_list[remove_list_size], condition);
+            remove_counts[remove_list_size++] = match_count - 1;
+        }
+        list_destroy(matches);
+        mfree(tmp_fields);
+    }
+
+    for (int i = 0; i < remove_list_size; i++) {
+        count += db_remove(DB, remove_counts[i], remove_list[i]);
+    }
+
+    return count;
 }
