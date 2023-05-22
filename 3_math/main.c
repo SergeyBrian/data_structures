@@ -455,14 +455,16 @@ void get_commands(char *filename) {
             }
             print_pst(operation_tree);
         } else if (strcmp(command, "eval") == 0) {
-            char *token = strtok(input, ",");
+            if (input) {
+                char *token = strtok(input, ",");
 
-            while (token != NULL) {
-                char var_name = token[0];
-                int value = atoi(token + 2);
+                while (token != NULL) {
+                    char var_name = token[0];
+                    int value = atoi(token + 2);
 
-                variables[var_name].value = value;
-                token = strtok(NULL, ",");
+                    variables[var_name].value = value;
+                    token = strtok(NULL, ",");
+                }
             }
             printf("\n%g\n", calculate(operation_tree));
         } else if (strcmp(command, "load_prf") == 0) {
