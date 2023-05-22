@@ -5,8 +5,16 @@
 #include <math.h>
 
 #define MAX_INPUT_LEN 3000
-#define MAX_QUEUE_SIZE 30
+#define MAX_QUEUE_SIZE 1000
 #define ALPHABET_LEN 2000
+
+#ifdef USE_DOUBLE
+#define num_type double
+#define NUM_FORMAT "%g"
+#else
+#define num_type int
+#define NUM_FORMAT "%d"
+#endif
 
 typedef enum {
     PLUS = (int) '+',
@@ -28,7 +36,7 @@ typedef enum {
 struct operation {
     struct operation *left;
     struct operation *right;
-    double value;
+    num_type value;
     operator op;
 };
 
@@ -111,7 +119,7 @@ int is_operator(char c) {
     }
 }
 
-double fact(double x) {
+num_type fact(num_type x) {
     if (x == 0) return 1;
     return (x * fact(x - 1));
 }
@@ -347,7 +355,7 @@ void zero_division_error() {
     exit(0);
 }
 
-double calculate(operation *op) {
+num_type calculate(operation *op) {
     switch (op->op) {
         case PLUS:
             return calculate(op->left) + calculate(op->right);
@@ -356,8 +364,8 @@ double calculate(operation *op) {
         case PROD:
             return calculate(op->left) * calculate(op->right);
         case DIV: {
-            double denominator = calculate(op->left);
-            double numerator = calculate(op->right);
+            num_type denominator = calculate(op->left);
+            num_type numerator = calculate(op->right);
             if (numerator == 0) zero_division_error();
             return denominator / numerator;
         }
@@ -376,7 +384,7 @@ double calculate(operation *op) {
         case UNARY_MINUS:
             return -(calculate(op->left));
         case VARIABLE:
-            return (double) variables[(int) op->value].value;
+            return (num_type) variables[(int) op->value].value;
     }
 }
 
@@ -386,7 +394,7 @@ void print_prf(operation *op) {
             printf("%c ", (int) op->value);
             break;
         case CONST:
-            printf("%g ", op->value);
+            printf(NUM_FORMAT" ", op->value);
             break;
         default:
             printf("%c ", op->op);
@@ -404,7 +412,7 @@ void print_pst(operation *op) {
             printf("%c ", (int) op->value);
             break;
         case CONST:
-            printf("%g ", op->value);
+            printf(NUM_FORMAT" ", op->value);
             break;
         default:
             printf("%c ", op->op);
@@ -489,7 +497,7 @@ void get_commands(char *filename) {
                     token = strtok(NULL, ",");
                 }
             }
-            printf("\n%f\n", calculate(operation_tree));
+            printf("\n"NUM_FORMAT"\n", calculate(operation_tree));
         } else if (strcmp(command, "load_prf") == 0) {
             load_prf(input);
         } else if (strcmp(command, "load_pst") == 0) {
