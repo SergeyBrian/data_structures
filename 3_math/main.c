@@ -113,6 +113,7 @@ int is_operator(char c) {
         case BRACES_OPEN:
         case BRACES_CLOSED:
         case MOD:
+        case UNARY_MINUS:
             return 1;
         default:
             return 0;
@@ -172,13 +173,23 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
 
     for (int i = 0; i < queue_size; i++) {
         if (isdigit(queue[i][0]) || isalpha(queue[i][0])) {
+            operation_linked *const_op = mmalloc(sizeof(operation_linked));
+            const_op->op = mmalloc(sizeof(operation));
+            const_op->op->op = CONST;
+            const_op->op->left = NULL;
+            const_op->op->right = NULL;
+            const_op->op->value = atof(queue[i]);
+            operation_linked *last = last_operation->previous;
+            last_operation->previous = const_op;
+            last_operation->previous->previous = last;
+            queue[i] = NULL;
             continue;
         }
 
         operation *new_op = (operation *) mmalloc(sizeof(operation));
         result = new_op;
-        last_operation->op = new_op;
         operator op = (operator) queue[i][0];
+        last_operation->op = new_op;
 
         switch (op) {
             case PLUS:
@@ -288,6 +299,9 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
                     mfree(left);
 
                     left = last_operation->previous->op;
+                    operation_linked *prev_ptr = last_operation->previous;
+                    last_operation->previous = last_operation->previous->previous;
+                    mfree(prev_ptr);
 
                     new_op->left = left;
                 }
@@ -346,6 +360,7 @@ void parse(char **output_queue, char *input, int *queue_size) {
             }
             while (operator_stack_size &&
                    (should_replace((operator) input[i], operator_stack[operator_stack_size - 1]))) {
+                operator_stack[operator_stack_size] = 0;
                 operator op = operator_stack[--operator_stack_size];
                 if (op != BRACES_OPEN && op != BRACES_CLOSED)
                     output_queue[(*queue_size)++][0] = (char) op;
@@ -594,7 +609,7 @@ int main() {
 
     get_commands("../input.txt");
 
-    free_operation(operation_tree);
+//    free_operation(operation_tree);
 
     printf("\n---------------------------\n");
     printf("malloc: %d\ncalloc: %d\nfree: %d\nmalloc+calloc-free: %d\n", malloc_count, calloc_count, free_count,
