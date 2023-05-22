@@ -12,8 +12,8 @@
 #define num_type double
 #define NUM_FORMAT "%g"
 #else
-#define num_type int
-#define NUM_FORMAT "%d"
+#define num_type long long int
+#define NUM_FORMAT "%lld"
 #endif
 
 typedef enum {
@@ -152,7 +152,18 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
         }
     }
 
+
     operation *result = NULL;
+
+    if (queue_size == 1) {
+        result = mmalloc(sizeof(operation));
+        result->op = CONST;
+        result->left = NULL;
+        result->right = NULL;
+        result->value = atof(queue[0]);
+        return result;
+    }
+
     operation_linked *operation_list = (operation_linked *) mmalloc(sizeof(operation_linked));
 
     operation_linked *last_operation = operation_list;
@@ -200,7 +211,9 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
                             incorrect_input_exit();
                         mfree(new_op->right);
                         new_op->right = last_operation->previous->op;
+                        operation_linked *prev_operation_ptr = last_operation->previous;
                         last_operation->previous = last_operation->previous->previous;
+                        mfree(prev_operation_ptr);
                     }
 
                     while (--j >= 0) {
@@ -228,10 +241,14 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
                         if (is_previous_null) {
                             if (last_operation->previous == NULL) incorrect_input_exit();
                             new_op->left = last_operation->previous->op;
+                            operation_linked *prev_operation_ptr = last_operation->previous;
                             last_operation->previous = last_operation->previous->previous;
+                            mfree(prev_operation_ptr);
                         } else {
                             new_op->left = last_operation->previous->op;
+                            operation_linked *prev_operation_ptr = last_operation->previous;
                             last_operation->previous = last_operation->previous->previous;
+                            mfree(prev_operation_ptr);
                         }
                     }
                 } else {
@@ -242,6 +259,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
                     new_op->left = last_operation->previous->previous->op;
                     operation_linked *previous_ptr = last_operation->previous;
                     last_operation->previous = last_operation->previous->previous->previous;
+                    mfree(previous_ptr);
                 }
 
                 break;
@@ -270,8 +288,6 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
                     mfree(left);
 
                     left = last_operation->previous->op;
-                    operation_linked *previous_ptr = last_operation->previous;
-//                    last_operation->previous = last_operation->previous->previous;
 
                     new_op->left = left;
                 }
