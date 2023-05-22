@@ -55,6 +55,7 @@ int calloc_count;
 int free_count;
 
 void load_prf(char *input);
+
 void load_pst(char *input);
 
 void *mmalloc(size_t size) {
@@ -88,14 +89,26 @@ void incorrect_input_exit() {
 }
 
 int should_replace(operator new, operator old) {
-    if (old == BRACES_OPEN) return 0;
+    if (old == BRACES_OPEN && new != BRACES_CLOSED) return 0;
     return operator_weight(new) <= operator_weight(old);
 }
 
 
 int is_operator(char c) {
-    return c == PLUS || c == MINUS || c == PROD || c == POW || c == FACT || c == DIV || c == BRACES_OPEN ||
-           c == BRACES_CLOSED;
+    switch (c) {
+        case PLUS:
+        case MINUS:
+        case PROD:
+        case POW:
+        case FACT:
+        case DIV:
+        case BRACES_OPEN:
+        case BRACES_CLOSED:
+        case MOD:
+            return 1;
+        default:
+            return 0;
+    }
 }
 
 double fact(double x) {
@@ -155,10 +168,8 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
             case DIV:
             case POW:
             case MOD: {
-                operation *left = (operation *) mmalloc(sizeof(operation));
-                operation *right = (operation *) mmalloc(sizeof(operation));
-                new_op->left = left;
-                new_op->right = right;
+                new_op->left = (operation *) mmalloc(sizeof(operation));
+                new_op->right = (operation *) mmalloc(sizeof(operation));
 
                 int j = i;
                 while (--j >= 0 && (queue[j] != NULL && !isalnum(queue[j][0])));
@@ -168,22 +179,20 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
                 if (j >= 0) {
                     if (queue[j] != NULL) {
                         if (isdigit(queue[j][0])) {
-                            right->value = atof(queue[j]);
-                            right->op = CONST;
+                            new_op->right->value = atof(queue[j]);
+                            new_op->right->op = CONST;
                         } else {
-                            right->value = queue[j][0];
-                            right->op = VARIABLE;
+                            new_op->right->value = queue[j][0];
+                            new_op->right->op = VARIABLE;
                         }
 
                         queue[j] = NULL;
                     } else {
                         if (last_operation->previous == NULL || last_operation->previous->op == NULL)
                             incorrect_input_exit();
-                        mfree(right);
+                        mfree(new_op->right);
                         new_op->right = last_operation->previous->op;
-                        operation_linked *previous_ptr = last_operation->previous;
-//                        last_operation->previous = last_operation->previous->previous;
-//                        free_operations_list(previous_ptr);
+                        last_operation->previous = last_operation->previous->previous;
                     }
 
                     while (--j >= 0) {
@@ -196,27 +205,26 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
 
                     if (j >= 0 && queue[j] != NULL) {
                         if (isdigit(queue[j][0])) {
-                            left->value = atof(queue[j]);
-                            left->op = CONST;
+                            new_op->left->value = atof(queue[j]);
+                            new_op->left->op = CONST;
                         } else {
-                            left->value = queue[j][0];
-                            left->op = VARIABLE;
+                            new_op->left->value = queue[j][0];
+                            new_op->left->op = VARIABLE;
                         }
 
                         queue[j] = NULL;
                     } else {
                         if (last_operation->previous == NULL) incorrect_input_exit();
                         if (last_operation->previous->op == NULL) incorrect_input_exit();
-                        mfree(left);
+                        mfree(new_op->left);
                         if (is_previous_null) {
-                            if (last_operation->previous->previous == NULL) incorrect_input_exit();
-                            left = last_operation->previous->previous->op;
+                            if (last_operation->previous == NULL) incorrect_input_exit();
+                            new_op->left = last_operation->previous->op;
+                            last_operation->previous = last_operation->previous->previous;
                         } else {
-                            left = last_operation->previous->op;
+                            new_op->left = last_operation->previous->op;
+                            last_operation->previous = last_operation->previous->previous;
                         }
-                        operation_linked *previous_ptr = last_operation->previous;
-//                        last_operation->previous = last_operation->previous->previous;
-                        new_op->left = left;
                     }
                 } else {
                     if (last_operation->previous == NULL || last_operation->previous->op == NULL ||
@@ -225,7 +233,7 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
                     new_op->right = last_operation->previous->op;
                     new_op->left = last_operation->previous->previous->op;
                     operation_linked *previous_ptr = last_operation->previous;
-//                    last_operation->previous = last_operation->previous->previous->previous;
+                    last_operation->previous = last_operation->previous->previous->previous;
                 }
 
                 break;
@@ -317,10 +325,10 @@ void parse(char **output_queue, char *input, int *queue_size) {
                 operator op = operator_stack[--operator_stack_size];
                 if (op != BRACES_OPEN && op != BRACES_CLOSED)
                     output_queue[(*queue_size)++][0] = (char) op;
+                else break;
             }
 
             if ((operator) input[i] != BRACES_CLOSED) operator_stack[operator_stack_size++] = (operator) input[i];
-            else operator_stack_size--;
         }
 
     }
@@ -334,6 +342,11 @@ void parse(char **output_queue, char *input, int *queue_size) {
     }
 }
 
+void zero_division_error() {
+    printf("Zero division error!\n");
+    exit(0);
+}
+
 double calculate(operation *op) {
     switch (op->op) {
         case PLUS:
@@ -342,14 +355,22 @@ double calculate(operation *op) {
             return calculate(op->left) - calculate(op->right);
         case PROD:
             return calculate(op->left) * calculate(op->right);
-        case DIV:
-            return calculate(op->left) / calculate(op->right);
+        case DIV: {
+            double denominator = calculate(op->left);
+            double numerator = calculate(op->right);
+            if (numerator == 0) zero_division_error();
+            return denominator / numerator;
+        }
         case POW:
             return pow(calculate(op->left), calculate(op->right));
         case FACT:
             return fact(calculate(op->left));
-        case MOD:
-            return (double) ((int) calculate(op->left) % (int) calculate(op->right));
+        case MOD: {
+            int denominator = (int) calculate(op->left);
+            int numerator = (int) calculate(op->right);
+            if (numerator == 0) zero_division_error();
+            return denominator % numerator;
+        }
         case CONST:
             return op->value;
         case UNARY_MINUS:
@@ -447,6 +468,7 @@ void get_commands(char *filename) {
                 exit(1);
             }
             print_prf(operation_tree);
+            printf("\n");
         } else if (strcmp(command, "save_pst") == 0) {
             printf("\n");
             if (!operation_tree) {
@@ -454,6 +476,7 @@ void get_commands(char *filename) {
                 exit(1);
             }
             print_pst(operation_tree);
+            printf("\n");
         } else if (strcmp(command, "eval") == 0) {
             if (input) {
                 char *token = strtok(input, ",");
@@ -466,7 +489,7 @@ void get_commands(char *filename) {
                     token = strtok(NULL, ",");
                 }
             }
-            printf("\n%g\n", calculate(operation_tree));
+            printf("\n%f\n", calculate(operation_tree));
         } else if (strcmp(command, "load_prf") == 0) {
             load_prf(input);
         } else if (strcmp(command, "load_pst") == 0) {
