@@ -175,10 +175,16 @@ operation *queue_to_tree(char *queue[MAX_QUEUE_SIZE], int queue_size, int is_rev
         if (isdigit(queue[i][0]) || isalpha(queue[i][0])) {
             operation_linked *const_op = mmalloc(sizeof(operation_linked));
             const_op->op = mmalloc(sizeof(operation));
-            const_op->op->op = CONST;
+            if (isalpha(queue[i][0])) {
+                const_op->op->op = VARIABLE;
+                const_op->op->value = (int) queue[i][0];
+            }
+            else {
+                const_op->op->op = CONST;
+                const_op->op->value = atof(queue[i]);
+            }
             const_op->op->left = NULL;
             const_op->op->right = NULL;
-            const_op->op->value = atof(queue[i]);
             operation_linked *last = last_operation->previous;
             last_operation->previous = const_op;
             last_operation->previous->previous = last;
@@ -609,7 +615,7 @@ int main() {
 
     get_commands("../input.txt");
 
-//    free_operation(operation_tree);
+    free_operation(operation_tree);
 
     printf("\n---------------------------\n");
     printf("malloc: %d\ncalloc: %d\nfree: %d\nmalloc+calloc-free: %d\n", malloc_count, calloc_count, free_count,
